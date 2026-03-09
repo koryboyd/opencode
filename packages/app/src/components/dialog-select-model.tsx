@@ -1,5 +1,16 @@
 import { Popover as Kobalte } from "@kobalte/core/popover"
-import { Component, ComponentProps, createMemo, For, JSX, Show, ValidComponent } from "solid-js"
+import {
+  Component,
+  ComponentProps,
+  createMemo,
+  For,
+  JSX,
+  Show,
+  ValidComponent,
+  createSignal,
+  onMount,
+  onCleanup,
+} from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLocal, type ModelKey } from "@/context/local"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
@@ -29,9 +40,27 @@ const ModelList: Component<{
   multiSelect?: boolean
   selected?: ModelKey[]
   onMultiSelect?: (model: ModelKey, selected: boolean) => void
+  lastSelectedIndex?: number
+  onLastSelectedIndexChange?: (index: number) => void
 }> = (props) => {
   const local = useLocal()
   const language = useLanguage()
+  const [shiftHeld, setShiftHeld] = createSignal(false)
+
+  onMount(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(true)
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(false)
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    onCleanup(() => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+    })
+  })
 
   const models = createMemo(() =>
     local.model
@@ -42,6 +71,36 @@ const ModelList: Component<{
 
   const isSelected = (modelKey: ModelKey) => {
     return props.selected?.some((m) => m.modelID === modelKey.modelID && m.providerID === modelKey.providerID)
+  }
+
+  const handleSelect = (x: any, index: number) => {
+    if (props.multiSelect && props.onMultiSelect && x) {
+      if (shiftHeld() && props.lastSelectedIndex !== undefined && props.lastSelectedIndex >= 0) {
+        const start = Math.min(props.lastSelectedIndex, index)
+        const end = Math.max(props.lastSelectedIndex, index)
+        const range = models().slice(start, end + 1)
+
+        for (const model of range) {
+          const modelKey = { modelID: model.id, providerID: model.provider.id }
+          if (!isSelected(modelKey) && props.selected!.length < MAX_COLLABORATIVE_MODELS) {
+            props.onMultiSelect(modelKey, true)
+          }
+        }
+      } else {
+        const modelKey = { modelID: x.id, providerID: x.provider.id }
+        const selected = isSelected(modelKey)
+        props.onMultiSelect(modelKey, !selected)
+      }
+
+      props.onLastSelectedIndexChange?.(index)
+    } else {
+      if (x) {
+        local.model.set(x ? { modelID: x.id, providerID: x.provider.id } : undefined, {
+          recent: true,
+        })
+      }
+      props.onSelect()
+    }
   }
 
   return (
@@ -72,18 +131,7 @@ const ModelList: Component<{
           {node}
         </Tooltip>
       )}
-      onSelect={(x) => {
-        if (props.multiSelect && props.onMultiSelect) {
-          const modelKey = { modelID: x.id, providerID: x.provider.id }
-          const selected = isSelected(modelKey)
-          props.onMultiSelect(modelKey, !selected)
-        } else {
-          local.model.set(x ? { modelID: x.id, providerID: x.provider.id } : undefined, {
-            recent: true,
-          })
-          props.onSelect()
-        }
-      }}
+      onSelect={(x, index) => handleSelect(x, index)}
     >
       {(i) => {
         const modelKey = () => ({ modelID: i.id, providerID: i.provider.id })
@@ -95,7 +143,7 @@ const ModelList: Component<{
                 onChange={(checked) => {
                   props.onMultiSelect?.(modelKey(), checked)
                 }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e: MouseEvent) => e.stopPropagation()}
               />
             </Show>
             <span class="truncate">{i.name}</span>
@@ -133,9 +181,11 @@ export function ModelSelectorPopover(props: {
   const [multiSelect, setMultiSelect] = createStore<{
     enabled: boolean
     selected: ModelKey[]
+    lastSelectedIndex: number
   }>({
     enabled: false,
     selected: [],
+    lastSelectedIndex: -1,
   })
 
   const handleManage = () => {
@@ -166,6 +216,7 @@ export function ModelSelectorPopover(props: {
     setMultiSelect("enabled", newEnabled)
     if (!newEnabled) {
       setMultiSelect("selected", [])
+      setMultiSelect("lastSelectedIndex", -1)
     }
   }
 
@@ -253,6 +304,8 @@ export function ModelSelectorPopover(props: {
             multiSelect={multiSelect.enabled}
             selected={multiSelect.selected}
             onMultiSelect={handleMultiSelectChange}
+            lastSelectedIndex={multiSelect.lastSelectedIndex}
+            onLastSelectedIndexChange={(index) => setMultiSelect("lastSelectedIndex", index)}
             action={
               <div class="flex items-center gap-1">
                 <Tooltip placement="top" value={language.t("command.provider.connect")}>
