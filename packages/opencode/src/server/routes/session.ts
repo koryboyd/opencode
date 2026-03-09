@@ -10,6 +10,7 @@ import { SessionRevert } from "../../session/revert"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "../../session/todo"
+import { SessionMemory } from "@/session/memory"
 import { Agent } from "../../agent/agent"
 import { Snapshot } from "@/snapshot"
 import { Log } from "../../util/log"
@@ -966,6 +967,103 @@ export const SessionRoutes = lazy(() =>
           requestID: params.permissionID,
           reply: c.req.valid("json").response,
         })
+        return c.json(true)
+      },
+    )
+    .get(
+      "/memory",
+      describeRoute({
+        summary: "List memory",
+        description: "Get stored memories for the current project.",
+        operationId: "session.memory.list",
+        responses: {
+          200: {
+            description: "List of memories",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.array(
+                    z.object({
+                      id: z.string(),
+                      content: z.string(),
+                      category: z.string(),
+                      importance: z.number(),
+                      createdAt: z.number(),
+                      updatedAt: z.number(),
+                    }),
+                  ),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const memories = await SessionMemory.get({ limit: 20 })
+        return c.json(memories)
+      },
+    )
+    .post(
+      "/memory",
+      describeRoute({
+        summary: "Add memory",
+        description: "Add a new memory entry.",
+        operationId: "session.memory.add",
+        responses: {
+          200: {
+            description: "Memory added",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    id: z.string(),
+                    content: z.string(),
+                    category: z.string(),
+                    importance: z.number(),
+                    createdAt: z.number(),
+                    updatedAt: z.number(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          content: z.string(),
+          category: z.string().optional(),
+          importance: z.number().optional(),
+        }),
+      ),
+      async (c) => {
+        const input = c.req.valid("json")
+        const memory = await SessionMemory.add(input)
+        return c.json(memory)
+      },
+    )
+    .delete(
+      "/memory/:memoryID",
+      describeRoute({
+        summary: "Delete memory",
+        description: "Delete a memory entry.",
+        operationId: "session.memory.delete",
+        responses: {
+          200: {
+            description: "Memory deleted",
+          },
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          memoryID: z.string(),
+        }),
+      ),
+      async (c) => {
+        const params = c.req.valid("param")
+        await SessionMemory.remove(params.memoryID)
         return c.json(true)
       },
     ),
