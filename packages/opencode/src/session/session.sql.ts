@@ -91,3 +91,18 @@ export const PermissionTable = sqliteTable("permission", {
   ...Timestamps,
   data: text({ mode: "json" }).notNull().$type<PermissionNext.Ruleset>(),
 })
+
+export const MemoryTable = sqliteTable(
+  "memory",
+  {
+    id: text().primaryKey(),
+    project_id: text()
+      .notNull()
+      .references(() => ProjectTable.id, { onDelete: "cascade" }),
+    content: text().notNull(),
+    category: text().notNull().default("general"),
+    importance: integer().notNull().default(0),
+    ...Timestamps,
+  },
+  (table) => [index("memory_project_idx").on(table.project_id), index("memory_category_idx").on(table.category)],
+)
