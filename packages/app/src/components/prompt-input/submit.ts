@@ -396,6 +396,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
     const send = async () => {
       const ok = await waitForWorktree()
       if (!ok) return
+      const collaborative = local.model.collaborative()
       await client.session.promptAsync({
         sessionID: session.id,
         agent,
@@ -403,6 +404,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
         messageID,
         parts: requestParts,
         variant,
+        collaborativeModels: collaborative.length > 0 ? collaborative : undefined,
       })
     }
 

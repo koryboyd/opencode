@@ -95,8 +95,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
       const [ephemeral, setEphemeral] = createStore<{
         model: Record<string, ModelKey | undefined>
+        collaborative: ModelKey[]
       }>({
         model: {},
+        collaborative: [],
       })
 
       const resolveConfigured = () => {
@@ -186,8 +188,26 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         current,
         recent,
         list: models.list,
+        find: (key: ModelKey) => models.find(key),
         cycle,
         set,
+        collaborative: () => ephemeral.collaborative,
+        setCollaborative: (selectedModels: ModelKey[]) => {
+          batch(() => {
+            const currentAgent = agent.current()
+            setEphemeral("collaborative", selectedModels)
+            if (selectedModels.length > 0) {
+              setEphemeral("model", currentAgent?.name ?? "", selectedModels[0])
+              if (selectedModels[0]) {
+                models.setVisibility(selectedModels[0], true)
+                models.recent.push(selectedModels[0])
+              }
+            }
+          })
+        },
+        clearCollaborative: () => {
+          setEphemeral("collaborative", [])
+        },
         visible(model: ModelKey) {
           return models.visible(model)
         },

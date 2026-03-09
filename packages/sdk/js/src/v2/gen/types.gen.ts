@@ -1882,12 +1882,22 @@ export type Agent = {
     modelID: string
     providerID: string
   }
+  models?: Array<{
+    modelID: string
+    providerID: string
+    role?: "primary" | "reasoning" | "coding" | "assistant"
+  }>
   variant?: string
   prompt?: string
   options: {
     [key: string]: unknown
   }
   steps?: number
+  multiAgent?: {
+    enabled?: boolean
+    parallel?: boolean
+    mergeStrategy?: "primary-wins" | "reasoning-wins" | "all-responses"
+  }
 }
 
 export type LspStatus = {

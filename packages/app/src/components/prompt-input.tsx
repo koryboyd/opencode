@@ -1,6 +1,6 @@
 import { useFilteredList } from "@opencode-ai/ui/hooks"
 import { useSpring } from "@opencode-ai/ui/motion-spring"
-import { createEffect, on, Component, Show, onCleanup, Switch, Match, createMemo, createSignal } from "solid-js"
+import { createEffect, on, Component, Show, onCleanup, Switch, Match, createMemo, createSignal, For } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createFocusSignal } from "@solid-primitives/active-element"
 import { useLocal } from "@/context/local"
@@ -26,6 +26,7 @@ import { Icon } from "@opencode-ai/ui/icon"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Tag } from "@opencode-ai/ui/tag"
 import { Select } from "@opencode-ai/ui/select"
 import { RadioGroup } from "@opencode-ai/ui/radio-group"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
@@ -1469,6 +1470,36 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       <Icon name="chevron-down" size="small" class="shrink-0" />
                     </ModelSelectorPopover>
                   </TooltipKeybind>
+                  <Show when={local.model.collaborative().length > 0}>
+                    <div class="flex items-center gap-1 ml-1">
+                      <For each={local.model.collaborative()}>
+                        {(modelKey) => {
+                          const modelInfo = local.model.find(modelKey)
+                          return (
+                            <Tag class="bg-surface-raised text-11-medium h-5 px-1.5 flex items-center gap-1">
+                              {modelInfo?.name ?? modelKey.modelID}
+                              <button
+                                class="ml-0.5 hover:text-text-error text-12-strong"
+                                onClick={() => {
+                                  const current = local.model.collaborative()
+                                  const filtered = current.filter(
+                                    (m) => !(m.modelID === modelKey.modelID && m.providerID === modelKey.providerID),
+                                  )
+                                  if (filtered.length === 0) {
+                                    local.model.clearCollaborative()
+                                  } else {
+                                    local.model.setCollaborative(filtered)
+                                  }
+                                }}
+                              >
+                                ×
+                              </button>
+                            </Tag>
+                          )
+                        }}
+                      </For>
+                    </div>
+                  </Show>
                 </Show>
                 <TooltipKeybind
                   placement="top"
