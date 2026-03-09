@@ -4,7 +4,7 @@ import { eq, desc, and } from "drizzle-orm"
 import { Instance } from "../project/instance"
 import { randomBytes } from "crypto"
 
-function generateMemoryId(): string {
+function genId(): string {
   return "mem_" + randomBytes(8).toString("hex")
 }
 
@@ -19,10 +19,16 @@ export namespace SessionMemory {
     updatedAt: number
   }
 
-  export async function add(input: { content: string; category?: string; importance?: number }): Promise<MemoryEntry> {
+  export type PublicMemoryEntry = Omit<MemoryEntry, "projectID">
+
+  export async function add(input: {
+    content: string
+    category?: string
+    importance?: number
+  }): Promise<PublicMemoryEntry> {
     const now = Date.now()
     const entry: MemoryEntry = {
-      id: generateMemoryId(),
+      id: genId(),
       projectID: Instance.project.id,
       content: input.content,
       category: input.category ?? "general",
@@ -45,17 +51,17 @@ export namespace SessionMemory {
         .run()
     })
 
-    return entry
+    const { projectID: _, ...rest } = entry
+    return rest
   }
 
-  export async function get(options?: { category?: string; limit?: number }): Promise<MemoryEntry[]> {
+  export async function get(options?: { category?: string; limit?: number }): Promise<PublicMemoryEntry[]> {
     const projectId = Instance.project.id
     const limit = options?.limit ?? 10
     const category = options?.category
 
-    let rows
     if (category) {
-      rows = Database.use((db) =>
+      const rows = Database.use((db) =>
         db
           .select()
           .from(MemoryTable)
@@ -64,21 +70,28 @@ export namespace SessionMemory {
           .limit(limit)
           .all(),
       )
-    } else {
-      rows = Database.use((db) =>
-        db
-          .select()
-          .from(MemoryTable)
-          .where(eq(MemoryTable.project_id, projectId))
-          .orderBy(desc(MemoryTable.importance), desc(MemoryTable.time_updated))
-          .limit(limit)
-          .all(),
-      )
+      return rows.map((row) => ({
+        id: row.id,
+        content: row.content,
+        category: row.category,
+        importance: row.importance,
+        createdAt: row.time_created,
+        updatedAt: row.time_updated,
+      }))
     }
+
+    const rows = Database.use((db) =>
+      db
+        .select()
+        .from(MemoryTable)
+        .where(eq(MemoryTable.project_id, projectId))
+        .orderBy(desc(MemoryTable.importance), desc(MemoryTable.time_updated))
+        .limit(limit)
+        .all(),
+    )
 
     return rows.map((row) => ({
       id: row.id,
-      projectID: row.project_id,
       content: row.content,
       category: row.category,
       importance: row.importance,
@@ -87,10 +100,23 @@ export namespace SessionMemory {
     }))
   }
 
-  export async function remove(id: string): Promise<void> {
+  export async function remove(id: string): Promise<boolean> {
+    const projectId = Instance.project.id
+    const existing = Database.use((db) =>
+      db
+        .select()
+        .from(MemoryTable)
+        .where(and(eq(MemoryTable.id, id), eq(MemoryTable.project_id, projectId)))
+        .get(),
+    )
+    if (!existing) return false
+
     Database.use((db) => {
-      db.delete(MemoryTable).where(eq(MemoryTable.id, id)).run()
+      db.delete(MemoryTable)
+        .where(and(eq(MemoryTable.id, id), eq(MemoryTable.project_id, projectId)))
+        .run()
     })
+    return true
   }
 
   export async function update(
@@ -100,23 +126,36 @@ export namespace SessionMemory {
       category: string
       importance: number
     }>,
-  ): Promise<MemoryEntry | null> {
+  ): Promise<PublicMemoryEntry | null> {
+    const projectId = Instance.project.id
     const now = Date.now()
-    const updates: Record<string, any> = { time_updated: now }
+
+    type UpdateFields = {
+      time_updated: number
+      content?: string
+      category?: string
+      importance?: number
+    }
+
+    const updates: UpdateFields = { time_updated: now }
 
     if (input.content !== undefined) updates.content = input.content
     if (input.category !== undefined) updates.category = input.category
     if (input.importance !== undefined) updates.importance = input.importance
 
     const row = Database.use((db) =>
-      db.update(MemoryTable).set(updates).where(eq(MemoryTable.id, id)).returning().get(),
+      db
+        .update(MemoryTable)
+        .set(updates)
+        .where(and(eq(MemoryTable.id, id), eq(MemoryTable.project_id, projectId)))
+        .returning()
+        .get(),
     )
 
     if (!row) return null
 
     return {
       id: row.id,
-      projectID: row.project_id,
       content: row.content,
       category: row.category,
       importance: row.importance,

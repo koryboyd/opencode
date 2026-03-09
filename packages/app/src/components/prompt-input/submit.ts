@@ -11,12 +11,14 @@ import { useLocal } from "@/context/local"
 import { usePermission } from "@/context/permission"
 import { type ImageAttachmentPart, type Prompt, usePrompt } from "@/context/prompt"
 import { useSDK } from "@/context/sdk"
+import { useSettings } from "@/context/settings"
 import { useSync } from "@/context/sync"
 import { Identifier } from "@/utils/id"
 import { Worktree as WorktreeState } from "@/utils/worktree"
 import { buildRequestParts } from "./build-request-parts"
 import { setCursorPosition } from "./editor-dom"
 import { formatServerError } from "@/utils/server-errors"
+import { enhancePrompt } from "@/utils/prompt-enhancer"
 
 type PendingPrompt = {
   abort: AbortController
@@ -64,6 +66,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
   const layout = useLayout()
   const language = useLanguage()
   const params = useParams()
+  const settings = useSettings()
 
   const errorMessage = (err: unknown) => {
     if (err && typeof err === "object" && "data" in err) {
@@ -120,13 +123,28 @@ export function createPromptSubmit(input: PromptSubmitInput) {
     event.preventDefault()
 
     const currentPrompt = prompt.current()
-    const text = currentPrompt.map((part) => ("content" in part ? part.content : "")).join("")
+    let text = currentPrompt.map((part) => ("content" in part ? part.content : "")).join("")
     const images = input.imageAttachments().slice()
     const mode = input.mode()
 
     if (text.trim().length === 0 && images.length === 0 && input.commentCount() === 0) {
       if (input.working()) abort()
       return
+    }
+
+    const enhancementConfig = {
+      enabled: settings.promptEnhancement.enabled(),
+      autoCorrect: settings.promptEnhancement.autoCorrect(),
+      expandAbbreviations: settings.promptEnhancement.expandAbbreviations(),
+      normalizeWhitespace: settings.promptEnhancement.normalizeWhitespace(),
+      fixGrammar: settings.promptEnhancement.fixGrammar(),
+    }
+
+    if (enhancementConfig.enabled) {
+      const result = enhancePrompt(text, enhancementConfig)
+      if (result.changes.length > 0) {
+        text = result.enhanced
+      }
     }
 
     const currentModel = local.model.current()

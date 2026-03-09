@@ -2,6 +2,7 @@ import { createStore, reconcile } from "solid-js/store"
 import { createEffect, createMemo } from "solid-js"
 import { createSimpleContext } from "@opencode-ai/ui/context"
 import { persisted } from "@/utils/persist"
+import type { PromptEnhancementConfig } from "@/utils/prompt-enhancer"
 
 export interface NotificationSettings {
   agent: boolean
@@ -39,6 +40,7 @@ export interface Settings {
   }
   notifications: NotificationSettings
   sounds: SoundSettings
+  promptEnhancement: PromptEnhancementConfig
 }
 
 const defaultSettings: Settings = {
@@ -72,6 +74,13 @@ const defaultSettings: Settings = {
     permissions: "staplebops-02",
     errorsEnabled: true,
     errors: "nope-03",
+  },
+  promptEnhancement: {
+    enabled: false,
+    autoCorrect: true,
+    expandAbbreviations: true,
+    normalizeWhitespace: true,
+    fixGrammar: false,
   },
 }
 
@@ -228,6 +237,40 @@ export const { use: useSettings, provider: SettingsProvider } = createSimpleCont
         errors: withFallback(() => store.sounds?.errors, defaultSettings.sounds.errors),
         setErrors(value: string) {
           setStore("sounds", "errors", value)
+        },
+      },
+      promptEnhancement: {
+        enabled: withFallback(() => store.promptEnhancement?.enabled, defaultSettings.promptEnhancement.enabled),
+        setEnabled(value: boolean) {
+          setStore("promptEnhancement", "enabled", value)
+        },
+        autoCorrect: withFallback(
+          () => store.promptEnhancement?.autoCorrect,
+          defaultSettings.promptEnhancement.autoCorrect,
+        ),
+        setAutoCorrect(value: boolean) {
+          setStore("promptEnhancement", "autoCorrect", value)
+        },
+        expandAbbreviations: withFallback(
+          () => store.promptEnhancement?.expandAbbreviations,
+          defaultSettings.promptEnhancement.expandAbbreviations,
+        ),
+        setExpandAbbreviations(value: boolean) {
+          setStore("promptEnhancement", "expandAbbreviations", value)
+        },
+        normalizeWhitespace: withFallback(
+          () => store.promptEnhancement?.normalizeWhitespace,
+          defaultSettings.promptEnhancement.normalizeWhitespace,
+        ),
+        setNormalizeWhitespace(value: boolean) {
+          setStore("promptEnhancement", "normalizeWhitespace", value)
+        },
+        fixGrammar: withFallback(
+          () => store.promptEnhancement?.fixGrammar,
+          defaultSettings.promptEnhancement.fixGrammar,
+        ),
+        setFixGrammar(value: boolean) {
+          setStore("promptEnhancement", "fixGrammar", value)
         },
       },
     }
