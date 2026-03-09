@@ -46,6 +46,7 @@ import { LLM } from "./llm"
 import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
+import { SessionMemory } from "./memory"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -62,6 +63,32 @@ const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested struc
 
 export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
+
+  async function preprocessUserPrompt(msgs: MessageV2.WithParts[], lastUser: MessageV2.User) {
+    const userMsg = msgs.find((m) => m.info.id === lastUser.id)
+    if (!userMsg) return
+
+    const userParts = userMsg.parts
+    const textParts = userParts.filter((p): p is MessageV2.TextPart => p.type === "text" && !p.ignored && !p.synthetic)
+
+    if (textParts.length === 0) return
+
+    const userText = textParts.map((p) => p.text).join("\n")
+    const shouldEnhance = userText.length < 50 || userText.includes("?")
+
+    if (shouldEnhance) {
+      const enhancement = `\n\n<system-note>Consider that this is a new session. The user may need more context or clarification. Ask clarifying questions if needed.</system-note>`
+
+      for (const part of textParts) {
+        if (part.id) {
+          await Session.updatePart({
+            ...part,
+            text: part.text + enhancement,
+          })
+        }
+      }
+    }
+  }
 
   const state = Instance.state(
     () => {
@@ -326,13 +353,15 @@ export namespace SessionPrompt {
       }
 
       step++
-      if (step === 1)
+      if (step === 1) {
         ensureTitle({
           session,
           modelID: lastUser.model.modelID,
           providerID: lastUser.model.providerID,
           history: msgs,
         })
+        await preprocessUserPrompt(msgs, lastUser)
+      }
 
       const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID).catch((e) => {
         if (Provider.ModelNotFoundError.isInstance(e)) {
@@ -677,6 +706,12 @@ export namespace SessionPrompt {
         if (mergePrompt) {
           system.push(`\n\n<!-- Multi-agent collaboration insights -->\n${mergePrompt}\n`)
         }
+      }
+
+      // Inject persistent memory context
+      const memoryContext = await SessionMemory.getContext()
+      if (memoryContext) {
+        system.push(memoryContext)
       }
 
       const result = await processor.process({

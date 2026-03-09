@@ -4,6 +4,7 @@ import { Provider } from "@/provider/provider"
 import { MessageV2 } from "./message-v2"
 import { LLM } from "./llm"
 import { Log } from "@/util/log"
+import { Instance } from "@/project/instance"
 
 const log = Log.create({ service: "collaborative" })
 
@@ -65,7 +66,10 @@ export async function executeCollaborative(params: {
       mode: agentName,
       agent: `collab-${model.id}`,
       variant: userMessage.variant,
-      path: userMessage.path,
+      path: {
+        cwd: Instance.directory,
+        root: Instance.worktree,
+      },
       cost: 0,
       tokens: {
         input: 0,
@@ -83,8 +87,6 @@ export async function executeCollaborative(params: {
     await Session.updateMessage(assistantMessage)
     assistantMessages.push(assistantMessage)
 
-    const iterationContext = iteration > 0 ? `\n\nPrevious responses from other models:\n${contextPrompt}` : ""
-
     try {
       const streamResult = await LLM.stream({
         agent: { name: agentName } as any,
@@ -97,14 +99,14 @@ export async function executeCollaborative(params: {
         messages: [
           ...messages.map((m: any) => ({
             role: m.info.role,
-            content: m.parts.map((p: any) => (p.type === "text" ? p.text : "")).join(""),
+            content: m.parts?.map((p: any) => (p.type === "text" ? p.text : "")).join("") || "",
           })),
           {
-            role: "user",
+            role: "user" as const,
             content:
               iteration > 0
-                ? `Refine and improve your response based on this feedback:\n\n${contextPrompt}\n\nOriginal request: ${userMessage.parts.map((p: any) => (p.type === "text" ? p.text : "")).join("")}`
-                : userMessage.parts.map((p: any) => (p.type === "text" ? p.text : "")).join(""),
+                ? `Refine and improve your response based on this feedback from other models:\n\n${contextPrompt}\n\nOriginal request: Please provide your best response considering the above feedback.`
+                : "Please provide your best response.",
           },
         ],
         retries: 0,
@@ -113,7 +115,7 @@ export async function executeCollaborative(params: {
       let fullResponse = ""
       for await (const chunk of streamResult.fullStream) {
         if (chunk.type === "text-delta") {
-          fullResponse += chunk.text
+          fullResponse += (chunk as any).text
         }
       }
 
@@ -147,14 +149,12 @@ export async function executeCollaborative(params: {
   }
 }
 
-export function mergeCollaborativeResponses(responses: Map<number, string>, models: Provider.Model[]): string {
+export function mergeCollaborativeResponses(responses: Map<number, string>, _models: Provider.Model[]): string {
   const parts: string[] = []
 
   responses.forEach((response, iteration) => {
-    const modelIndex = iteration % models.length
-    const model = models[modelIndex]
     if (response) {
-      parts.push(`## Model ${modelIndex + 1} (${model?.id ?? "unknown"}):\n\n${response}`)
+      parts.push(`## Model ${(iteration % 2) + 1} (Iteration ${iteration + 1}):\n\n${response}`)
     }
   })
 
