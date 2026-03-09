@@ -136,6 +136,14 @@ export namespace SessionPrompt {
     format: MessageV2.Format.optional(),
     system: z.string().optional(),
     variant: z.string().optional(),
+    collaborativeModels: z
+      .array(
+        z.object({
+          providerID: z.string(),
+          modelID: z.string(),
+        }),
+      )
+      .optional(),
     parts: z.array(
       z.discriminatedUnion("type", [
         MessageV2.TextPart.omit({
@@ -209,7 +217,7 @@ export namespace SessionPrompt {
       return message
     }
 
-    return loop({ sessionID: input.sessionID })
+    return loop({ sessionID: input.sessionID, collaborativeModels: input.collaborativeModels })
   })
 
   export async function resolvePromptParts(template: string): Promise<PromptInput["parts"]> {
@@ -298,9 +306,17 @@ export namespace SessionPrompt {
   export const LoopInput = z.object({
     sessionID: Identifier.schema("session"),
     resume_existing: z.boolean().optional(),
+    collaborativeModels: z
+      .array(
+        z.object({
+          providerID: z.string(),
+          modelID: z.string(),
+        }),
+      )
+      .optional(),
   })
   export const loop = fn(LoopInput, async (input) => {
-    const { sessionID, resume_existing } = input
+    const { sessionID, resume_existing, collaborativeModels } = input
 
     const abort = resume_existing ? resume(sessionID) : start(sessionID)
     if (!abort) {
@@ -705,6 +721,25 @@ export namespace SessionPrompt {
         })
         if (mergePrompt) {
           system.push(`\n\n<!-- Multi-agent collaboration insights -->\n${mergePrompt}\n`)
+        }
+      }
+
+      // Execute collaborative workflow if user selected multiple models
+      if (collaborativeModels && collaborativeModels.length >= 2) {
+        const collabResult = await executeCollaborative({
+          sessionID,
+          agentName: agent.name,
+          userMessage: lastUser,
+          messages: msgs,
+          models: collaborativeModels,
+          abort,
+          tools,
+        })
+        if (collabResult) {
+          const mergePrompt = mergeCollaborativeResponses(collabResult.responses, [])
+          if (mergePrompt) {
+            system.push(`\n\n<!-- Collaborative model responses -->\n${mergePrompt}\n`)
+          }
         }
       }
 
