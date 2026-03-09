@@ -76,7 +76,7 @@ const defaultSettings: Settings = {
     errors: "nope-03",
   },
   promptEnhancement: {
-    enabled: false,
+    enabled: true,
     autoCorrect: true,
     expandAbbreviations: true,
     normalizeWhitespace: true,
