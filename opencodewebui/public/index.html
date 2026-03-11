@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://nobanthanks.com; connect-src 'self'"
+    />
+    <link rel="icon" href="https://nobanthanks.com/assets/chomik.gif" type="image/gif" />
+    <title>OpenCode Web UI — Autonomous Edition</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Courier+Prime:wght@400;700&display=swap");
+      :root {
+        --bg: #080808;
+        --bg1: #0c0c0c;
+        --bg2: #101010;
+        --b1: #1a1a1a;
+        --b2: #222;
+        --txt: #cccccc;
+        --dim: #1e1e1e;
+        --dim2: #444;
+        --green: #00ff41;
+        --cyan: #00ff41;
+        --lobster: #ff6b35;
+      }
+      .light-theme {
+        --bg: #f5fff5;
+        --bg1: #edfff0;
+        --b1: #b0ddb8;
+        --txt: #003311;
+        --dim: #80cc90;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: var(--bg);
+        color: var(--txt);
+        font-family: "Courier Prime", "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      #APP {
+        position: relative;
+        z-index: 1;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      #TOPBAR {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        background: #0a0a0a;
+        border-bottom: 1px solid var(--green3);
+      }
+      .logo-mark {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+      .logo-mark img {
+        height: 24px;
+        image-rendering: pixelated;
+      }
+      .logo-words {
+        line-height: 1.25;
+      }
+      .logo-main {
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        font-family: "Press Start 2P", monospace;
+      }
+      .mode-rail {
+        display: flex;
+        margin-left: auto;
+        border: 1px solid var(--b2);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .mode-tab {
+        padding: 5px 11px;
+        background: transparent;
+        border: none;
+        color: var(--dim2);
+        cursor: pointer;
+      }
+      .mode-tab.on {
+        color: var(--green);
+        background: rgba(0, 255, 65, 0.07);
+      }
+      #MAIN {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+      }
+      #SB {
+        width: 200px;
+        flex-shrink: 0;
+        background: var(--bg1);
+        border-right: 1px solid var(--b1);
+        display: flex;
+        flex-direction: column;
+      }
+      .sb-sec {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--b1);
+      }
+      .sb-lbl {
+        font-size: 6.5px;
+        color: var(--dim2);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .sb-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 6px;
+        margin-bottom: 2px;
+        background: transparent;
+        border: 1px solid var(--b1);
+        border-radius: 3px;
+        color: var(--dim2);
+        cursor: pointer;
+      }
+      .sb-btn:hover {
+        color: var(--txt);
+        border-color: var(--b2);
+      }
+      .act-btn {
+        width: 100%;
+        border: none;
+        border-radius: 3px;
+        padding: 5px 6px;
+        margin-bottom: 3px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .b-g {
+        background: linear-gradient(135deg, #007744, #44ffaa);
+        color: #000;
+      }
+      .b-r {
+        background: linear-gradient(135deg, #8a0022, #ff3355);
+        color: #fff;
+      }
+      .b-lob {
+        background: linear-gradient(135deg, #8a3300, #ff6b35);
+        color: #fff;
+      }
+      #CONTENT {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .pf {
+        flex: 1;
+        display: none;
+        overflow-y: auto;
+      }
+      .pf.on {
+        display: block;
+      }
+      .in-row {
+        display: flex;
+        gap: 6px;
+        padding: 7px 10px;
+        background: var(--bg1);
+        border-top: 1px solid var(--b1);
+      }
+      .ti {
+        flex: 1;
+        background: var(--bg2);
+        border: 1px solid rgba(0, 212, 255, 0.1);
+        border-radius: 4px;
+        color: var(--txt);
+        padding: 6px 8px;
+      }
+      .send-btn {
+        background: linear-gradient(135deg, var(--cyan), #004466);
+        border: none;
+        border-radius: 4px;
+        padding: 6px 13px;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .chat-msg {
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        border-radius: 4px;
+      }
+      .chat-msg.user {
+        background: rgba(0, 212, 255, 0.08);
+        margin-left: 30px;
+      }
+      .chat-msg.ai {
+        background: rgba(0, 255, 65, 0.03);
+        margin-right: 30px;
+      }
+      .ai-out {
+        color: #8aaccc;
+        font-size: 10px;
+      }
+      .ai-out pre {
+        background: #050510;
+        border: 1px solid rgba(0, 212, 255, 0.1);
+        border-left: 3px solid var(--cyan);
+        padding: 9px;
+        font-size: 9px;
+        color: #9adeff;
+      }
+      .toast {
+        position: fixed;
+        bottom: 48px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 255, 65, 0.15);
+        border: 1px solid var(--green);
+        color: var(--green);
+        padding: 7px 16px;
+        border-radius: 20px;
+        font-size: 9px;
+        z-index: 2000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="APP">
+      <div id="TOPBAR">
+        <div class="logo-mark">
+          <img src="https://nobanthanks.com/assets/chomik.gif" alt="chomik" />
+          <div class="logo-words"><div class="logo-main">OpenCode</div></div>
+        </div>
+        <div class="mode-rail">
+          <button class="mode-tab on" data-m="lab" onclick="setMode('lab')">⬡ Lab</button>
+          <button class="mode-tab" data-m="chat" onclick="setMode('chat')">💬 Chat</button>
+          <button class="mode-tab" data-m="re" onclick="setMode('re')">🔬 RE</button>
+          <button class="mode-tab" data-m="mission" onclick="setMode('mission')">🎯 Mission</button>
+          <button class="mode-tab" data-m="oc" onclick="setMode('oc')">🦞 OC</button>
+        </div>
+      </div>
+
+      <div id="MAIN">
+        <div id="SB">
+          <div id="SB_SCROLL">
+            <div class="sb-sec" id="sbLab">
+              <div class="sb-lbl">LAB</div>
+              <button class="act-btn b-g" onclick="runLab()">▶ RUN LAB</button>
+            </div>
+            <div class="sb-sec" id="sbChat" style="display: none">
+              <div class="sb-lbl">CHAT</div>
+              <button class="act-btn b-r" onclick="clearChat()">✕ CLEAR</button>
+            </div>
+            <div class="sb-sec" id="sbRE" style="display: none">
+              <div class="sb-lbl">RE MODULES</div>
+              <button class="act-btn b-lob" onclick="runRE()">🔬 RUN</button>
+            </div>
+            <div class="sb-sec" id="sbMission" style="display: none">
+              <div class="sb-lbl">MISSION</div>
+              <button class="act-btn b-lob" onclick="launchMission()">🎯 LAUNCH</button>
+            </div>
+            <div class="sb-sec" id="sbOC" style="display: none">
+              <div class="sb-lbl">OPENCODE</div>
+              <button class="act-btn b-lob" onclick="runAgent()">🤖 AGENT</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="CONTENT">
+          <div id="pLab" class="pf on">
+            <div style="padding: 10px">
+              <div class="sb-lbl">TASK</div>
+              <textarea
+                id="labTask"
+                style="
+                  width: 100%;
+                  height: 80px;
+                  background: var(--bg2);
+                  border: 1px solid var(--b2);
+                  color: var(--txt);
+                "
+                placeholder="Enter task..."
+              ></textarea>
+              <button class="send-btn" onclick="runLab()" style="margin-top: 10px">EXECUTE</button>
+              <div id="labOut" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
+            </div>
+          </div>
+
+          <div id="pChat" class="pf">
+            <div id="chatLog" style="flex: 1; overflow-y: auto; padding: 10px"></div>
+            <div class="in-row">
+              <textarea id="chatInput" class="ti" rows="2" placeholder="Message..."></textarea>
+              <button class="send-btn" onclick="sendChat()">SEND</button>
+            </div>
+          </div>
+
+          <div id="pRE" class="pf">
+            <div style="padding: 10px">
+              <textarea
+                id="reInput"
+                style="
+                  width: 100%;
+                  height: 120px;
+                  background: var(--bg2);
+                  border: 1px solid var(--b2);
+                  color: var(--txt);
+                "
+                placeholder="Paste code/binary..."
+              ></textarea>
+              <button class="act-btn b-lob" onclick="runRE()" style="margin-top: 5px">ANALYZE</button>
+              <div id="reOut" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
+            </div>
+          </div>
+
+          <div id="pMission" class="pf">
+            <div style="padding: 10px">
+              <textarea
+                id="missionTA"
+                style="
+                  width: 100%;
+                  height: 80px;
+                  background: var(--bg2);
+                  border: 1px solid var(--b2);
+                  color: var(--txt);
+                "
+                placeholder="Mission objective..."
+              ></textarea>
+              <button class="act-btn b-lob" onclick="launchMission()" style="margin-top: 5px; width: 100%">
+                LAUNCH MISSION
+              </button>
+              <div id="mLog" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
+            </div>
+          </div>
+
+          <div id="pOC" class="pf">
+            <div style="padding: 10px">
+              <div class="sb-lbl">OPENCODE AGENT</div>
+              <textarea
+                id="agentTask"
+                style="
+                  width: 100%;
+                  height: 80px;
+                  background: var(--bg2);
+                  border: 1px solid var(--b2);
+                  color: var(--txt);
+                "
+                placeholder="Task for agent..."
+              ></textarea>
+              <button class="send-btn" onclick="runAgent()" style="margin-top: 5px">RUN AGENT</button>
+              <div id="agentLog" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button
+        id="auditToggle"
+        onclick="toggleAudit()"
+        style="
+          position: fixed;
+          bottom: 16px;
+          right: 16px;
+          background: var(--bg1);
+          border: 1px solid var(--b2);
+          padding: 5px 10px;
+          color: var(--cyan);
+          cursor: pointer;
+        "
+      >
+        AUDIT
+      </button>
+      <div
+        id="auditPanel"
+        style="
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.9);
+          z-index: 1000;
+          padding: 20px;
+          overflow: auto;
+        "
+      >
+        <h2 style="color: var(--cyan); margin-bottom: 10px">AUDIT TRAIL</h2>
+        <button onclick="toggleAudit()" style="position: fixed; top: 20px; right: 20px; padding: 5px 10px">
+          CLOSE
+        </button>
+        <div id="auditLog" style="font-family: monospace; font-size: 12px; white-space: pre-wrap; color: #8aaccc"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = ""
+      const OC_API = "/api/opencode"
+      const OLLAMA_API = "/api/ollama"
+
+      var G = {
+        model: "",
+        ocOk: false,
+        ollamaOk: false,
+        mode: "lab",
+        chatHistory: [],
+        audit: [],
+      }
+
+      function $(id) {
+        return document.getElementById(id)
+      }
+
+      function audit(msg, level = "info") {
+        const entry = `[${new Date().toLocaleTimeString()}] [${level.toUpperCase()}] ${msg}`
+        G.audit.push(entry)
+        const log = $("auditLog")
+        if (log) log.textContent = G.audit.join("\n")
+      }
+
+      function toast(msg) {
+        const t = document.createElement("div")
+        t.className = "toast"
+        t.textContent = msg
+        document.body.appendChild(t)
+        setTimeout(() => t.remove(), 3000)
+      }
+
+      function setMode(mode) {
+        G.mode = mode
+        document.querySelectorAll(".pf").forEach((p) => p.classList.remove("on"))
+        document.querySelectorAll(".sb-sec").forEach((s) => (s.style.display = "none"))
+        $(`p${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add("on")
+        $(`sb${mode.charAt(0).toUpperCase() + mode.slice(1)}`).style.display = ""
+        document.querySelectorAll(".mode-tab").forEach((t) => t.classList.toggle("on", t.dataset.m === mode))
+        audit(`Mode: ${mode}`, "info")
+      }
+
+      async function ollamaCheck() {
+        try {
+          const r = await fetch(`${OLLAMA_API}/api/tags`)
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          const d = await r.json()
+          G.ollamaOk = true
+          const sel = $("modelSel") || createModelSelect()
+          sel.innerHTML = ""
+          ;(d.models || []).forEach((m) => {
+            const opt = document.createElement("option")
+            opt.value = m.name
+            opt.textContent = m.name
+            sel.appendChild(opt)
+          })
+          G.model = sel.value
+          sel.onchange = () => {
+            G.model = sel.value
+          }
+          toast("Ollama connected")
+          audit("Ollama online", "ok")
+        } catch (e) {
+          G.ollamaOk = false
+          audit("Ollama offline: " + e.message, "warn")
+          toast("Ollama not connected")
+        }
+      }
+
+      function createModelSelect() {
+        const sel = document.createElement("select")
+        sel.id = "modelSel"
+        sel.style.cssText =
+          "background:var(--bg2);border:1px solid var(--b2);color:var(--cyan);padding:3px 6px;margin-left:10px"
+        $("TOPBAR").appendChild(sel)
+        return sel
+      }
+
+      async function checkOCServer() {
+        try {
+          const r = await fetch(`${OC_API}/api/health`)
+          G.ocOk = r.ok
+          if (G.ocOk) {
+            toast("OpenCode connected")
+            audit("OpenCode online", "ok")
+          } else {
+            toast("OpenCode not responding")
+          }
+        } catch (e) {
+          G.ocOk = false
+          audit("OpenCode offline: " + e.message, "warn")
+        }
+      }
+
+      async function chat(sys, prompt, onChunk) {
+        if (!G.model) throw new Error("No model selected")
+        const messages = [
+          { role: "system", content: sys },
+          { role: "user", content: prompt },
+        ]
+        const res = await fetch(`${OLLAMA_API}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: G.model, stream: true, messages }),
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const reader = res.body.getReader()
+        const dec = new TextDecoder()
+        let full = ""
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          for (const line of dec.decode(value).split("\n")) {
+            if (!line.trim()) continue
+            try {
+              const j = JSON.parse(line)
+              if (j.message?.content) {
+                full += j.message.content
+                if (onChunk) onChunk(j.message.content, full)
+              }
+            } catch {}
+          }
+        }
+        return full
+      }
+
+      async function ocExec(cmd) {
+        const res = await fetch(`${OC_API}/api/exec`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command: cmd }),
+        })
+        if (!res.ok) throw new Error(`exec HTTP ${res.status}`)
+        return await res.json()
+      }
+
+      async function ocAgentRun(task, onEvent) {
+        const res = await fetch(`${OC_API}/v1/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "auto",
+            stream: true,
+            messages: [{ role: "user", content: task }],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "bash_exec",
+                  parameters: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
+                },
+              },
+              {
+                type: "function",
+                function: {
+                  name: "file_read",
+                  parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+                },
+              },
+            ],
+          }),
+        })
+        if (!res.ok) throw new Error(`OpenCode HTTP ${res.status}`)
+        const reader = res.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ""
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split("\n")
+          buf = lines.pop() || ""
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue
+            const data = line.slice(6).trim()
+            if (data === "[DONE]") return
+            try {
+              const j = JSON.parse(data)
+              const delta = j.choices?.[0]?.delta
+              if (delta?.content && onEvent) onEvent({ type: "text", content: delta.content })
+              if (delta?.tool_calls && onEvent) onEvent({ type: "tool_calls", tool_calls: delta.tool_calls })
+            } catch {}
+          }
+        }
+      }
+
+      // ── LAB ─────────────────────────────────────────────
+      async function runLab() {
+        const task = $("labTask").value.trim()
+        if (!task) {
+          toast("Enter a task")
+          return
+        }
+        if (!G.model) {
+          toast("Select a model")
+          return
+        }
+
+        const out = $("labOut")
+        out.innerHTML = '<div class="ai-out">Running...</div>'
+        audit("Lab started", "info")
+
+        try {
+          const res = await chat("You are an expert AI. Provide detailed, actionable output.", task, (tok, full) => {
+            out.innerHTML = `<div class="ai-out">${formatMd(full)}</div>`
+          })
+          audit("Lab complete", "ok")
+        } catch (e) {
+          out.innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`
+          audit("Lab error: " + e.message, "warn")
+        }
+      }
+
+      // ── CHAT ─────────────────────────────────────────────
+      function sendChat() {
+        const input = $("chatInput")
+        const msg = input.value.trim()
+        if (!msg) return
+
+        const log = $("chatLog")
+        const userDiv = document.createElement("div")
+        userDiv.className = "chat-msg user"
+        userDiv.innerHTML = `<div>${escapeHtml(msg)}</div>`
+        log.appendChild(userDiv)
+
+        input.value = ""
+
+        const aiDiv = document.createElement("div")
+        aiDiv.className = "chat-msg ai"
+        aiDiv.innerHTML = '<div class="ai-out">Thinking...</div>'
+        log.appendChild(aiDiv)
+
+        chat("You are a helpful AI assistant.", msg, (tok, full) => {
+          aiDiv.querySelector(".ai-out").innerHTML = formatMd(full)
+          log.scrollTop = log.scrollHeight
+        })
+          .then(() => {
+            G.chatHistory.push({ role: "user", content: msg })
+            G.chatHistory.push({ role: "assistant", content: aiDiv.querySelector(".ai-out").textContent })
+          })
+          .catch((e) => {
+            aiDiv.querySelector(".ai-out").innerHTML = `<span style="color:var(--red)">Error: ${e.message}</span>`
+          })
+
+        log.scrollTop = log.scrollHeight
+      }
+
+      // ── RE ─────────────────────────────────────────────
+      async function runRE() {
+        const input = $("reInput").value.trim()
+        if (!input) {
+          toast("Enter input")
+          return
+        }
+        if (!G.model) {
+          toast("Select a model")
+          return
+        }
+
+        const out = $("reOut")
+        out.innerHTML = "<div>Analyzing...</div>"
+        audit("RE started", "info")
+
+        try {
+          const res = await chat(
+            "Analyze this code/binary for security issues, vulnerabilities, and provide detailed findings with code examples.",
+            input,
+            (tok, full) => {
+              out.innerHTML = `<pre>${escapeHtml(full)}</pre>`
+            },
+          )
+          audit("RE complete", "ok")
+        } catch (e) {
+          out.innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`
+          audit("RE error: " + e.message, "warn")
+        }
+      }
+
+      // ── MISSION ─────────────────────────────────────────────
+      async function launchMission() {
+        const obj = $("missionTA").value.trim()
+        if (!obj) {
+          toast("Enter mission objective")
+          return
+        }
+        if (!G.model) {
+          toast("Select a model")
+          return
+        }
+
+        const log = $("mLog")
+        log.innerHTML = "<div>Mission launched...</div>"
+        audit("Mission started", "info")
+
+        // Simple mission: just use lab pipeline
+        try {
+          const res = await chat(
+            "You are an autonomous agent. Break down the mission into steps and execute each one systematically. Provide progress updates.",
+            obj,
+            (tok, full) => {
+              log.innerHTML = `<pre>${escapeHtml(full)}</pre>`
+            },
+          )
+          log.innerHTML += "\n\n✅ Mission complete"
+          audit("Mission complete", "ok")
+        } catch (e) {
+          log.innerHTML += `\n\n❌ Error: ${e.message}`
+          audit("Mission error: " + e.message, "warn")
+        }
+      }
+
+      // ── AGENT ─────────────────────────────────────────────
+      async function runAgent() {
+        const task = $("agentTask").value.trim()
+        if (!task) {
+          toast("Enter agent task")
+          return
+        }
+
+        const log = $("agentLog")
+        log.innerHTML = "<div>Agent running...</div>"
+        audit("Agent started", "info")
+
+        try {
+          if (G.ocOk) {
+            // Use OpenCode agentic loop
+            await ocAgentRun(task, (event) => {
+              if (event.type === "text") {
+                log.innerHTML = `<div class="ai-out">${escapeHtml(event.content)}</div>`
+              }
+            })
+          } else {
+            // Fallback to regular chat
+            await chat(
+              "You are an autonomous coding agent. Use available tools to complete the task.",
+              task,
+              (tok, full) => {
+                log.innerHTML = `<div class="ai-out">${escapeHtml(full)}</div>`
+              },
+            )
+          }
+          audit("Agent complete", "ok")
+        } catch (e) {
+          log.innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`
+          audit("Agent error: " + e.message, "warn")
+        }
+      }
+
+      // ── UTILS ─────────────────────────────────────────────
+      function escapeHtml(str) {
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      }
+
+      function formatMd(text) {
+        if (!text) return ""
+        return escapeHtml(text)
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*(.*?)\*/g, "<em>$1</em>")
+          .replace(/`(.*?)`/g, "<code>$1</code>")
+          .replace(/\n/g, "<br>")
+      }
+
+      function toggleAudit() {
+        const p = $("auditPanel")
+        p.style.display = p.style.display === "none" ? "block" : "none"
+      }
+
+      function clearChat() {
+        $("chatLog").innerHTML = ""
+        G.chatHistory = []
+      }
+
+      // ── INIT ─────────────────────────────────────────────
+      ;(async function boot() {
+        audit("Booting...", "sys")
+
+        // Create model select if missing
+        if (!$("modelSel")) createModelSelect()
+
+        // Check services
+        await Promise.all([ollamaCheck(), checkOCServer()])
+
+        audit("Ready", "ok")
+        toast("OpenCode Web UI ready")
+      })()
+    </script>
+  </body>
+</html>
