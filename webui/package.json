@@ -1,0 +1,15 @@
+{
+  "name": "opencode-webui",
+  "version": "1.0.0",
+  "description": "OpenCode Web UI with OpenNBT styling",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "cors": "^2.8.5"
+  }
+}
