@@ -1,798 +1,831 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://nobanthanks.com; connect-src 'self'"
-    />
-    <link rel="icon" href="https://nobanthanks.com/assets/chomik.gif" type="image/gif" />
-    <title>OpenCode Web UI — Autonomous Edition</title>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Courier+Prime:wght@400;700&display=swap");
-      :root {
-        --bg: #080808;
-        --bg1: #0c0c0c;
-        --bg2: #101010;
-        --b1: #1a1a1a;
-        --b2: #222;
-        --txt: #cccccc;
-        --dim: #1e1e1e;
-        --dim2: #444;
-        --green: #00ff41;
-        --cyan: #00ff41;
-        --lobster: #ff6b35;
-      }
-      .light-theme {
-        --bg: #f5fff5;
-        --bg1: #edfff0;
-        --b1: #b0ddb8;
-        --txt: #003311;
-        --dim: #80cc90;
-      }
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      html,
-      body {
-        height: 100%;
-        overflow: hidden;
-      }
-      body {
-        background: var(--bg);
-        color: var(--txt);
-        font-family: "Courier Prime", "Courier New", monospace;
-        font-size: 12px;
-        line-height: 1.5;
-      }
-      #APP {
-        position: relative;
-        z-index: 1;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      #TOPBAR {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 12px;
-        background: #0a0a0a;
-        border-bottom: 1px solid var(--green3);
-      }
-      .logo-mark {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        cursor: pointer;
-      }
-      .logo-mark img {
-        height: 24px;
-        image-rendering: pixelated;
-      }
-      .logo-words {
-        line-height: 1.25;
-      }
-      .logo-main {
-        color: var(--green);
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        font-family: "Press Start 2P", monospace;
-      }
-      .mode-rail {
-        display: flex;
-        margin-left: auto;
-        border: 1px solid var(--b2);
-        border-radius: 4px;
-        overflow: hidden;
-      }
-      .mode-tab {
-        padding: 5px 11px;
-        background: transparent;
-        border: none;
-        color: var(--dim2);
-        cursor: pointer;
-      }
-      .mode-tab.on {
-        color: var(--green);
-        background: rgba(0, 255, 65, 0.07);
-      }
-      #MAIN {
-        flex: 1;
-        overflow: hidden;
-        display: flex;
-      }
-      #SB {
-        width: 200px;
-        flex-shrink: 0;
-        background: var(--bg1);
-        border-right: 1px solid var(--b1);
-        display: flex;
-        flex-direction: column;
-      }
-      .sb-sec {
-        padding: 6px 8px;
-        border-bottom: 1px solid var(--b1);
-      }
-      .sb-lbl {
-        font-size: 6.5px;
-        color: var(--dim2);
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        margin-bottom: 4px;
-      }
-      .sb-btn {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 3px 6px;
-        margin-bottom: 2px;
-        background: transparent;
-        border: 1px solid var(--b1);
-        border-radius: 3px;
-        color: var(--dim2);
-        cursor: pointer;
-      }
-      .sb-btn:hover {
-        color: var(--txt);
-        border-color: var(--b2);
-      }
-      .act-btn {
-        width: 100%;
-        border: none;
-        border-radius: 3px;
-        padding: 5px 6px;
-        margin-bottom: 3px;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .b-g {
-        background: linear-gradient(135deg, #007744, #44ffaa);
-        color: #000;
-      }
-      .b-r {
-        background: linear-gradient(135deg, #8a0022, #ff3355);
-        color: #fff;
-      }
-      .b-lob {
-        background: linear-gradient(135deg, #8a3300, #ff6b35);
-        color: #fff;
-      }
-      #CONTENT {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      .pf {
-        flex: 1;
-        display: none;
-        overflow-y: auto;
-      }
-      .pf.on {
-        display: block;
-      }
-      .in-row {
-        display: flex;
-        gap: 6px;
-        padding: 7px 10px;
-        background: var(--bg1);
-        border-top: 1px solid var(--b1);
-      }
-      .ti {
-        flex: 1;
-        background: var(--bg2);
-        border: 1px solid rgba(0, 212, 255, 0.1);
-        border-radius: 4px;
-        color: var(--txt);
-        padding: 6px 8px;
-      }
-      .send-btn {
-        background: linear-gradient(135deg, var(--cyan), #004466);
-        border: none;
-        border-radius: 4px;
-        padding: 6px 13px;
-        color: #fff;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .chat-msg {
-        margin-bottom: 10px;
-        padding: 8px 12px;
-        border-radius: 4px;
-      }
-      .chat-msg.user {
-        background: rgba(0, 212, 255, 0.08);
-        margin-left: 30px;
-      }
-      .chat-msg.ai {
-        background: rgba(0, 255, 65, 0.03);
-        margin-right: 30px;
-      }
-      .ai-out {
-        color: #8aaccc;
-        font-size: 10px;
-      }
-      .ai-out pre {
-        background: #050510;
-        border: 1px solid rgba(0, 212, 255, 0.1);
-        border-left: 3px solid var(--cyan);
-        padding: 9px;
-        font-size: 9px;
-        color: #9adeff;
-      }
-      .toast {
-        position: fixed;
-        bottom: 48px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 255, 65, 0.15);
-        border: 1px solid var(--green);
-        color: var(--green);
-        padding: 7px 16px;
-        border-radius: 20px;
-        font-size: 9px;
-        z-index: 2000;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="APP">
-      <div id="TOPBAR">
-        <div class="logo-mark">
-          <img src="https://nobanthanks.com/assets/chomik.gif" alt="chomik" />
-          <div class="logo-words"><div class="logo-main">OpenCode</div></div>
-        </div>
-        <div class="mode-rail">
-          <button class="mode-tab on" data-m="lab" onclick="setMode('lab')">⬡ Lab</button>
-          <button class="mode-tab" data-m="chat" onclick="setMode('chat')">💬 Chat</button>
-          <button class="mode-tab" data-m="re" onclick="setMode('re')">🔬 RE</button>
-          <button class="mode-tab" data-m="mission" onclick="setMode('mission')">🎯 Mission</button>
-          <button class="mode-tab" data-m="oc" onclick="setMode('oc')">🦞 OC</button>
-        </div>
-      </div>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenCode Web UI</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg: #0a0a0a; --bg2: #141414; --bg3: #1a1a1a;
+  --border: #333; --text: #e0e0e0; --muted: #888;
+  --accent: #3b82f6; --accent2: #8b5cf6;
+  --success: #10b981; --warn: #f59e0b; --error: #ef4444;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  height: 100vh; overflow: hidden;
+}
+#app { display: flex; flex-direction: column; height: 100vh; }
 
-      <div id="MAIN">
-        <div id="SB">
-          <div id="SB_SCROLL">
-            <div class="sb-sec" id="sbLab">
-              <div class="sb-lbl">LAB</div>
-              <button class="act-btn b-g" onclick="runLab()">▶ RUN LAB</button>
-            </div>
-            <div class="sb-sec" id="sbChat" style="display: none">
-              <div class="sb-lbl">CHAT</div>
-              <button class="act-btn b-r" onclick="clearChat()">✕ CLEAR</button>
-            </div>
-            <div class="sb-sec" id="sbRE" style="display: none">
-              <div class="sb-lbl">RE MODULES</div>
-              <button class="act-btn b-lob" onclick="runRE()">🔬 RUN</button>
-            </div>
-            <div class="sb-sec" id="sbMission" style="display: none">
-              <div class="sb-lbl">MISSION</div>
-              <button class="act-btn b-lob" onclick="launchMission()">🎯 LAUNCH</button>
-            </div>
-            <div class="sb-sec" id="sbOC" style="display: none">
-              <div class="sb-lbl">OPENCODE</div>
-              <button class="act-btn b-lob" onclick="runAgent()">🤖 AGENT</button>
-            </div>
-          </div>
-        </div>
+/* Header */
+header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 16px; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo { font-weight: bold; font-size: 18px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+.status { font-size: 12px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
+.status-item { display: flex; align-items: center; gap: 4px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status-dot.online { background: var(--success); }
+.status-dot.offline { background: var(--error); }
+.model-select {
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; font-size: 13px;
+}
 
-        <div id="CONTENT">
-          <div id="pLab" class="pf on">
-            <div style="padding: 10px">
-              <div class="sb-lbl">TASK</div>
-              <textarea
-                id="labTask"
-                style="
-                  width: 100%;
-                  height: 80px;
-                  background: var(--bg2);
-                  border: 1px solid var(--b2);
-                  color: var(--txt);
-                "
-                placeholder="Enter task..."
-              ></textarea>
-              <button class="send-btn" onclick="runLab()" style="margin-top: 10px">EXECUTE</button>
-              <div id="labOut" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
-            </div>
-          </div>
+/* Main Layout */
+.main { display: flex; flex: 1; overflow: hidden; }
 
-          <div id="pChat" class="pf">
-            <div id="chatLog" style="flex: 1; overflow-y: auto; padding: 10px"></div>
-            <div class="in-row">
-              <textarea id="chatInput" class="ti" rows="2" placeholder="Message..."></textarea>
-              <button class="send-btn" onclick="sendChat()">SEND</button>
-            </div>
-          </div>
+/* Sidebar */
+.sidebar {
+  width: 260px; background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  transition: width 0.2s;
+}
+.sidebar.collapsed { width: 0; border: none; }
+.sidebar-section { padding: 12px; border-bottom: 1px solid var(--border); }
+.sidebar-label {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+.sidebar-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; margin-bottom: 4px;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--text); font-size: 13px; cursor: pointer;
+  transition: all 0.15s;
+}
+.sidebar-btn:hover { background: var(--bg3); border-color: var(--border); }
+.sidebar-btn.active { background: rgba(59, 130, 246, 0.1); border-color: var(--accent); color: var(--accent); }
+.sidebar-btn.running { border-color: var(--warn); color: var(--warn); }
+.agent-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px;
+}
+.agent-card {
+  padding: 8px; border: 1px solid var(--border); border-radius: 6px;
+  text-align: center; cursor: pointer; transition: all 0.2s;
+  font-size: 11px;
+}
+.agent-card:hover { border-color: var(--accent); }
+.agent-card.active { background: rgba(59, 130, 246, 0.15); border-color: var(--accent); }
+.agent-emoji { font-size: 20px; margin-bottom: 4px; }
 
-          <div id="pRE" class="pf">
-            <div style="padding: 10px">
-              <textarea
-                id="reInput"
-                style="
-                  width: 100%;
-                  height: 120px;
-                  background: var(--bg2);
-                  border: 1px solid var(--b2);
-                  color: var(--txt);
-                "
-                placeholder="Paste code/binary..."
-              ></textarea>
-              <button class="act-btn b-lob" onclick="runRE()" style="margin-top: 5px">ANALYZE</button>
-              <div id="reOut" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
-            </div>
-          </div>
+/* Content */
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.panel { flex: 1; display: none; overflow: hidden; flex-direction: column; }
+.panel.active { display: flex; }
 
-          <div id="pMission" class="pf">
-            <div style="padding: 10px">
-              <textarea
-                id="missionTA"
-                style="
-                  width: 100%;
-                  height: 80px;
-                  background: var(--bg2);
-                  border: 1px solid var(--b2);
-                  color: var(--txt);
-                "
-                placeholder="Mission objective..."
-              ></textarea>
-              <button class="act-btn b-lob" onclick="launchMission()" style="margin-top: 5px; width: 100%">
-                LAUNCH MISSION
-              </button>
-              <div id="mLog" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
-            </div>
-          </div>
+/* Chat */
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.chat-msg {
+  max-width: 80%; padding: 12px 16px; border-radius: 12px;
+  line-height: 1.5; position: relative;
+}
+.chat-msg.user { align-self: flex-end; background: var(--accent); color: white; }
+.chat-msg.assistant { align-self: flex-start; background: var(--bg3); border: 1px solid var(--border); }
+.chat-msg.system { align-self: center; background: var(--bg2); border: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.chat-input-area {
+  padding: 16px; background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; gap: 8px;
+}
+.chat-input {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 12px; border-radius: 8px;
+  resize: none; font-family: inherit;
+}
+.chat-input:focus { outline: none; border-color: var(--accent); }
 
-          <div id="pOC" class="pf">
-            <div style="padding: 10px">
-              <div class="sb-lbl">OPENCODE AGENT</div>
-              <textarea
-                id="agentTask"
-                style="
-                  width: 100%;
-                  height: 80px;
-                  background: var(--bg2);
-                  border: 1px solid var(--b2);
-                  color: var(--txt);
-                "
-                placeholder="Task for agent..."
-              ></textarea>
-              <button class="send-btn" onclick="runAgent()" style="margin-top: 5px">RUN AGENT</button>
-              <div id="agentLog" style="margin-top: 10px; white-space: pre-wrap; color: #8aaccc; font-size: 10px"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+/* Agent */
+.agent-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.agent-msg {
+  padding: 12px; border-radius: 8px; background: var(--bg3);
+  border: 1px solid var(--border);
+}
+.agent-msg .role {
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  margin-bottom: 6px; text-transform: uppercase;
+}
+.agent-tool {
+  background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 10px; border-radius: 6px; margin: 8px 0; font-family: monospace; font-size: 12px;
+}
+.agent-tool-result {
+  background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 8px; border-radius: 4px; margin-top: 6px; font-family: monospace; font-size: 11px;
+}
+.agent-input-area { padding: 16px; background: var(--bg2); border-top: 1px solid var(--border); display: flex; gap: 8px; }
 
-      <button
-        id="auditToggle"
-        onclick="toggleAudit()"
-        style="
-          position: fixed;
-          bottom: 16px;
-          right: 16px;
-          background: var(--bg1);
-          border: 1px solid var(--b2);
-          padding: 5px 10px;
-          color: var(--cyan);
-          cursor: pointer;
-        "
-      >
-        AUDIT
-      </button>
-      <div
-        id="auditPanel"
-        style="
-          display: none;
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.9);
-          z-index: 1000;
-          padding: 20px;
-          overflow: auto;
-        "
-      >
-        <h2 style="color: var(--cyan); margin-bottom: 10px">AUDIT TRAIL</h2>
-        <button onclick="toggleAudit()" style="position: fixed; top: 20px; right: 20px; padding: 5px 10px">
-          CLOSE
-        </button>
-        <div id="auditLog" style="font-family: monospace; font-size: 12px; white-space: pre-wrap; color: #8aaccc"></div>
+/* Files */
+.file-explorer { display: flex; flex: 1; overflow: hidden; }
+.file-tree {
+  width: 250px; background: var(--bg2); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 8px;
+}
+.file-item {
+  padding: 6px 8px; cursor: pointer; border-radius: 4px;
+  display: flex; align-items: center; gap: 6px; font-size: 13px;
+}
+.file-item:hover { background: var(--bg3); }
+.file-item.selected { background: rgba(59, 130, 246, 0.1); color: var(--accent); }
+.file-item.dir { color: var(--accent2); }
+.file-icon { font-size: 14px; }
+.file-editor {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--bg); border: none;
+}
+.file-editor-header {
+  padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: var(--muted);
+}
+.file-editor textarea {
+  flex: 1; background: var(--bg); color: var(--text);
+  border: none; padding: 16px; font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px; line-height: 1.5; resize: none;
+}
+.file-editor textarea:focus { outline: none; }
+
+/* Terminal */
+.terminal { display: flex; flex-direction: column; background: #000; }
+.terminal-output {
+  flex: 1; overflow-y: auto; padding: 12px;
+  font-family: 'Monaco', 'Menlo', monospace; font-size: 12px;
+  color: #00ff00; white-space: pre-wrap;
+}
+.terminal-line { margin-bottom: 2px; }
+.terminal-prompt { color: var(--accent); }
+.terminal-error { color: var(--error); }
+.terminal-input-area {
+  display: flex; background: var(--bg2); border-top: 1px solid var(--border);
+  padding: 8px;
+}
+.terminal-input {
+  flex: 1; background: transparent; border: none;
+  color: var(--text); font-family: 'Monaco', 'Menlo', monospace'; font-size: 12px;
+}
+.terminal-input:focus { outline: none; }
+
+/* Buttons */
+.btn {
+  padding: 8px 16px; border: none; border-radius: 6px;
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg2); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--error); color: white; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* Utility */
+.hidden { display: none !important; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: 8px; }
+.gap-4 { gap: 16px; }
+.p-4 { padding: 16px; }
+.text-sm { font-size: 12px; }
+.text-muted { color: var(--muted); }
+.mt-2 { margin-top: 8px; }
+.mb-2 { margin-bottom: 8px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    OpenCode
+  </div>
+  <div class="status">
+    <div class="status-item">
+      <div class="status-dot" id="ocStatus"></div>
+      <span id="ocStatusText">OpenCode</span>
+    </div>
+    <div class="status-item" id="modelSection" style="display:none">
+      <select class="model-select" id="modelSelect"></select>
+    </div>
+  </div>
+  <button class="btn btn-secondary btn-sm" onclick="toggleSidebar()" id="sidebarToggle">◀</button>
+</header>
+
+<div class="main">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Modes</div>
+      <button class="sidebar-btn active" data-mode="chat" onclick="setMode('chat')">💬 Chat</button>
+      <button class="sidebar-btn" data-mode="agent" onclick="setMode('agent')">🤖 Agent</button>
+      <button class="sidebar-btn" data-mode="files" onclick="setMode('files')">📁 Files</button>
+      <button class="sidebar-btn" data-mode="terminal" onclick="setMode('terminal')">⌨ Terminal</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Agent</div>
+      <div class="agent-grid" id="agentGrid"></div>
+      <button class="btn btn-primary btn-sm mt-2" style="width:100%" onclick="runAgent()">▶ Run</button>
+      <button class="btn btn-secondary btn-sm mt-2" style="width:100%" onclick="abortAgent()">⬛ Abort</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Actions</div>
+      <button class="sidebar-btn" onclick="showSettings()">⚙ Settings</button>
+      <button class="sidebar-btn" onclick="clearAll()">🗑 Clear All</button>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="content">
+    <!-- Chat Panel -->
+    <div class="panel active" id="panel-chat">
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chatInput" rows="3" placeholder="Message. Use @file to inject file, @agent to send to agent..."></textarea>
+        <button class="btn btn-primary" onclick="sendChat()">Send</button>
+        <button class="btn btn-secondary" onclick="clearChat()">Clear</button>
       </div>
     </div>
 
-    <script>
-      const API_BASE = ""
-      const OC_API = "/api/opencode"
-      const OLLAMA_API = "/api/ollama"
+    <!-- Agent Panel -->
+    <div class="panel" id="panel-agent">
+      <div class="agent-messages" id="agentMessages"></div>
+      <div class="agent-input-area">
+        <textarea class="chat-input" id="agentInput" rows="2" placeholder="Enter task for agent (will use OpenCode tools)..."></textarea>
+        <button class="btn btn-primary" onclick="runAgent()">Run</button>
+        <button class="btn btn-secondary" onclick="abortAgent()">Abort</button>
+      </div>
+    </div>
 
-      var G = {
-        model: "",
-        ocOk: false,
-        ollamaOk: false,
-        mode: "lab",
-        chatHistory: [],
-        audit: [],
-      }
+    <!-- Files Panel -->
+    <div class="panel" id="panel-files">
+      <div class="file-explorer">
+        <div class="file-tree" id="fileTree">
+          <div class="text-muted p-4">Loading...</div>
+        </div>
+        <div class="file-editor">
+          <div class="file-editor-header">
+            <span id="fileName">No file selected</span>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary btn-sm" onclick="saveFile()">💾 Save</button>
+              <button class="btn btn-secondary btn-sm" onclick="closeFile()">✕ Close</button>
+            </div>
+          </div>
+          <textarea id="fileEditor" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </div>
 
-      function $(id) {
-        return document.getElementById(id)
-      }
+    <!-- Terminal Panel -->
+    <div class="panel" id="panel-terminal">
+      <div class="terminal">
+        <div class="terminal-output" id="terminalOutput"></div>
+        <div class="terminal-input-area">
+          <span class="terminal-prompt">$</span>
+          <input type="text" class="terminal-input" id="terminalInput" placeholder="Enter command..." autocomplete="off">
+          <button class="btn btn-secondary btn-sm" onclick="clearTerminal()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
 
-      function audit(msg, level = "info") {
-        const entry = `[${new Date().toLocaleTimeString()}] [${level.toUpperCase()}] ${msg}`
-        G.audit.push(entry)
-        const log = $("auditLog")
-        if (log) log.textContent = G.audit.join("\n")
-      }
+<!-- Settings Modal -->
+<div id="settingsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:24px; max-width:500px; width:90%; max-height:80vh; overflow:auto;">
+    <h2 style="margin-bottom:16px;">Settings</h2>
+    <div style="margin-bottom:16px;">
+      <label style="display:block; margin-bottom:4px; font-size:13px;">OpenCode Server URL</label>
+      <input type="text" id="ocUrl" value="http://localhost:3000" style="width:100%; padding:8px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:4px;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block; margin-bottom:4px; font-size:13px;">Default Model</label>
+      <input type="text" id="defaultModel" placeholder="llama2, codellama, etc." style="width:100%; padding:8px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:4px;">
+    </div>
+    <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
 
-      function toast(msg) {
-        const t = document.createElement("div")
-        t.className = "toast"
-        t.textContent = msg
-        document.body.appendChild(t)
-        setTimeout(() => t.remove(), 3000)
-      }
+<script>
+const API_BASE = '/api';
+const state = {
+  ocConnected: false,
+  model: '',
+  mode: 'chat',
+  chatHistory: [],
+  agentMessages: [],
+  openFiles: {},
+  activeFile: null,
+  fileTree: [],
+  projectRoot: '.',
+  agentRunning: false,
+  agentAbort: false,
+  terminalHistory: [],
+  termHistIdx: -1,
+  termCwd: '~'
+};
 
-      function setMode(mode) {
-        G.mode = mode
-        document.querySelectorAll(".pf").forEach((p) => p.classList.remove("on"))
-        document.querySelectorAll(".sb-sec").forEach((s) => (s.style.display = "none"))
-        $(`p${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add("on")
-        $(`sb${mode.charAt(0).toUpperCase() + mode.slice(1)}`).style.display = ""
-        document.querySelectorAll(".mode-tab").forEach((t) => t.classList.toggle("on", t.dataset.m === mode))
-        audit(`Mode: ${mode}`, "info")
-      }
+// ── UTILS ─────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt>'); }
+function toast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:${type==='error'?'var(--error)':type==='success'?'var(--success)':'var(--accent)'};
+    color:white; padding:8px 16px; border-radius:20px; font-size:13px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:9999;
+  `;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
 
-      async function ollamaCheck() {
-        try {
-          const r = await fetch(`${OLLAMA_API}/api/tags`)
-          if (!r.ok) throw new Error(`HTTP ${r.status}`)
-          const d = await r.json()
-          G.ollamaOk = true
-          const sel = $("modelSel") || createModelSelect()
-          sel.innerHTML = ""
-          ;(d.models || []).forEach((m) => {
-            const opt = document.createElement("option")
-            opt.value = m.name
-            opt.textContent = m.name
-            sel.appendChild(opt)
-          })
-          G.model = sel.value
-          sel.onchange = () => {
-            G.model = sel.value
-          }
-          toast("Ollama connected")
-          audit("Ollama online", "ok")
-        } catch (e) {
-          G.ollamaOk = false
-          audit("Ollama offline: " + e.message, "warn")
-          toast("Ollama not connected")
-        }
-      }
+// ── STATUS ────────────────────────────────────
+async function checkOC() {
+  try {
+    const r = await fetch(`${API_BASE}/health`);
+    state.ocConnected = r.ok;
+    $('ocStatus').className = `status-dot ${r.ok?'online':'offline'}`;
+    $('ocStatusText').textContent = r.ok ? 'OpenCode ✓' : 'OpenCode ✗';
+    if (r.ok) await loadModels();
+  } catch (e) {
+    state.ocConnected = false;
+    $('ocStatus').className = 'status-dot offline';
+    $('ocStatusText').textContent = 'OpenCode ✗';
+  }
+}
 
-      function createModelSelect() {
-        const sel = document.createElement("select")
-        sel.id = "modelSel"
-        sel.style.cssText =
-          "background:var(--bg2);border:1px solid var(--b2);color:var(--cyan);padding:3px 6px;margin-left:10px"
-        $("TOPBAR").appendChild(sel)
-        return sel
-      }
+async function loadModels() {
+  try {
+    const r = await fetch(`${API_BASE}/models`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const sel = $('modelSelect');
+    sel.innerHTML = '';
+    (d.models || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.name;
+      opt.textContent = m.name;
+      sel.appendChild(opt);
+    });
+    state.model = sel.value;
+    sel.onchange = () => { state.model = sel.value; localStorage.setItem('oc-model', state.model); };
+    $('modelSection').style.display = 'flex';
+  } catch (e) {}
+}
 
-      async function checkOCServer() {
-        try {
-          const r = await fetch(`${OC_API}/api/health`)
-          G.ocOk = r.ok
-          if (G.ocOk) {
-            toast("OpenCode connected")
-            audit("OpenCode online", "ok")
-          } else {
-            toast("OpenCode not responding")
-          }
-        } catch (e) {
-          G.ocOk = false
-          audit("OpenCode offline: " + e.message, "warn")
-        }
-      }
+// ── MODES ──────────────────────────────────────
+function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-btn[data-mode]').forEach(b => b.classList.remove('active'));
+  $(`panel-${mode}`).classList.add('active');
+  $(`[data-mode="${mode}"]`).classList.add('active');
+  
+  if (mode === 'files') loadFileTree();
+  if (mode === 'terminal') $('terminalInput').focus();
+}
 
-      async function chat(sys, prompt, onChunk) {
-        if (!G.model) throw new Error("No model selected")
-        const messages = [
-          { role: "system", content: sys },
-          { role: "user", content: prompt },
-        ]
-        const res = await fetch(`${OLLAMA_API}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: G.model, stream: true, messages }),
+// ── CHAT ───────────────────────────────────────
+async function sendChat() {
+  const input = $('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  const chatLog = $('chatMessages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'chat-msg user';
+  userDiv.innerHTML = `<div>${escapeHtml(msg)}</div>`;
+  chatLog.appendChild(userDiv);
+  
+  input.value = '';
+  scrollToBottom(chatLog);
+  
+  // Check for context injection
+  const context = extractContext(msg);
+  let messages = [...state.chatHistory, { role: 'user', content: msg }];
+  if (context) messages = buildMessagesWithContext(msg, context);
+  
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'chat-msg assistant';
+  aiDiv.innerHTML = '<div class="ai-out">Thinking...</div>';
+  chatLog.appendChild(aiDiv);
+  
+  try {
+    const res = await streamChat(messages, (tok, full) => {
+      aiDiv.querySelector('.ai-out').innerHTML = formatMd(full);
+      scrollToBottom(chatLog);
+    });
+    state.chatHistory.push({ role: 'user', content: msg });
+    state.chatHistory.push({ role: 'assistant', content: aiDiv.querySelector('.ai-out').textContent });
+    // Limit history
+    if (state.chatHistory.length > 100) state.chatHistory = state.chatHistory.slice(-50);
+  } catch (e) {
+    aiDiv.querySelector('.ai-out').innerHTML = `<span style="color:var(--error)">Error: ${e.message}</span>`;
+  }
+}
+
+function extractContext(msg) {
+  const ctx = {};
+  if (msg.includes('@file') && state.activeFile) {
+    ctx.file = { path: state.activeFile, content: state.openFiles[state.activeFile] || '' };
+  }
+  if (msg.includes('@agent') && state.agentMessages.length > 0) {
+    ctx.agent = state.agentMessages.slice(-10);
+  }
+  return Object.keys(ctx).length ? ctx : null;
+}
+
+function buildMessagesWithContext(msg, context) {
+  const msgs = [];
+  if (context.file) {
+    msgs.push({ role: 'system', content: `File: ${context.file.path}\n\n${context.file.content.slice(0, 4000)}` });
+  }
+  if (context.agent) {
+    msgs.push({ role: 'system', content: `Recent agent activity:\n${context.agent.map(m => `${m.role}: ${m.content}`).join('\n')}` });
+  }
+  msgs.push({ role: 'user', content: msg });
+  return [...state.chatHistory.slice(-20), ...msgs];
+}
+
+// ── AGENT ──────────────────────────────────────
+async function runAgent() {
+  const input = $('agentInput');
+  const task = input.value.trim();
+  if (!task) return;
+  if (!state.ocConnected) { toast('OpenCode not connected', 'error'); return; }
+  
+  const log = $('agentMessages');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'agent-msg';
+  msgDiv.innerHTML = `<div class="role">Task</div><div>${escapeHtml(task)}</div>`;
+  log.appendChild(msgDiv);
+  
+  input.value = '';
+  state.agentRunning = true;
+  state.agentAbort = false;
+  
+  try {
+    let conversation = [{ role: 'user', content: task }];
+    let loopCount = 0;
+    const MAX_LOOPS = 10;
+    
+    while (loopCount < MAX_LOOPS && !state.agentAbort) {
+      const response = await fetch(`${API_BASE}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'auto',
+          stream: true,
+          messages: conversation,
+          tools: [
+            { type: 'function', function: { name: 'bash_exec', description: 'Execute shell command', parameters: { type: 'object', properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } } },
+            { type: 'function', function: { name: 'file_read', description: 'Read file', parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } } },
+            { type: 'function', function: { name: 'file_write', description: 'Write file', parameters: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } } },
+            { type: 'function', function: { name: 'file_list', description: 'List directory', parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } } },
+            { type: 'function', function: { name: 'git_status', description: 'Git status', parameters: { type: 'object', properties: {} } } },
+            { type: 'function', function: { name: 'git_commit', description: 'Commit changes', parameters: { type: 'object', properties: { message: { type: 'string' } }, required: ['message'] } } },
+          ]
         })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const reader = res.body.getReader()
-        const dec = new TextDecoder()
-        let full = ""
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          for (const line of dec.decode(value).split("\n")) {
-            if (!line.trim()) continue
-            try {
-              const j = JSON.parse(line)
-              if (j.message?.content) {
-                full += j.message.content
-                if (onChunk) onChunk(j.message.content, full)
-              }
-            } catch {}
-          }
-        }
-        return full
-      }
-
-      async function ocExec(cmd) {
-        const res = await fetch(`${OC_API}/api/exec`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ command: cmd }),
-        })
-        if (!res.ok) throw new Error(`exec HTTP ${res.status}`)
-        return await res.json()
-      }
-
-      async function ocAgentRun(task, onEvent) {
-        const res = await fetch(`${OC_API}/v1/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "auto",
-            stream: true,
-            messages: [{ role: "user", content: task }],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: "bash_exec",
-                  parameters: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
-                },
-              },
-              {
-                type: "function",
-                function: {
-                  name: "file_read",
-                  parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
-                },
-              },
-            ],
-          }),
-        })
-        if (!res.ok) throw new Error(`OpenCode HTTP ${res.status}`)
-        const reader = res.body.getReader()
-        const dec = new TextDecoder()
-        let buf = ""
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += dec.decode(value, { stream: true })
-          const lines = buf.split("\n")
-          buf = lines.pop() || ""
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue
-            const data = line.slice(6).trim()
-            if (data === "[DONE]") return
-            try {
-              const j = JSON.parse(data)
-              const delta = j.choices?.[0]?.delta
-              if (delta?.content && onEvent) onEvent({ type: "text", content: delta.content })
-              if (delta?.tool_calls && onEvent) onEvent({ type: "tool_calls", tool_calls: delta.tool_calls })
-            } catch {}
-          }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const reader = response.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '', full = '', toolCalls = [];
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const j = JSON.parse(data);
+            const delta = j.choices?.[0]?.delta;
+            if (delta?.content) {
+              full += delta.content;
+              // Could update UI progressively here
+            }
+            if (delta?.tool_calls) {
+              toolCalls.push(...delta.tool_calls);
+            }
+          } catch {}
         }
       }
-
-      // ── LAB ─────────────────────────────────────────────
-      async function runLab() {
-        const task = $("labTask").value.trim()
-        if (!task) {
-          toast("Enter a task")
-          return
-        }
-        if (!G.model) {
-          toast("Select a model")
-          return
-        }
-
-        const out = $("labOut")
-        out.innerHTML = '<div class="ai-out">Running...</div>'
-        audit("Lab started", "info")
-
-        try {
-          const res = await chat("You are an expert AI. Provide detailed, actionable output.", task, (tok, full) => {
-            out.innerHTML = `<div class="ai-out">${formatMd(full)}</div>`
-          })
-          audit("Lab complete", "ok")
-        } catch (e) {
-          out.innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`
-          audit("Lab error: " + e.message, "warn")
+      
+      conversation.push({ role: 'assistant', content: full });
+      
+      // Execute tool calls
+      if (toolCalls.length > 0) {
+        const toolDiv = document.createElement('div');
+        toolDiv.className = 'agent-tool';
+        toolDiv.innerHTML = `<strong>🔧 Tools:</strong> ${toolCalls.map(t => t.function?.name).join(', ')}`;
+        log.appendChild(toolDiv);
+        
+        for (const tc of toolCalls) {
+          const args = JSON.parse(tc.function?.arguments || '{}');
+          const result = await executeTool(tc.function?.name, args);
+          conversation.push({ role: 'tool', content: JSON.stringify(result) });
+          
+          const resultDiv = document.createElement('div');
+          resultDiv.className = 'agent-tool-result';
+          resultDiv.innerHTML = `<strong>${tc.function?.name}:</strong><br>${escapeHtml(JSON.stringify(result, null, 2)).slice(0, 500)}`;
+          log.appendChild(resultDiv);
         }
       }
+      
+      loopCount++;
+      scrollToBottom(log);
+    }
+    
+    toast('Agent completed', 'success');
+  } catch (e) {
+    toast('Agent error: ' + e.message, 'error');
+  } finally {
+    state.agentRunning = false;
+  }
+}
 
-      // ── CHAT ─────────────────────────────────────────────
-      function sendChat() {
-        const input = $("chatInput")
-        const msg = input.value.trim()
-        if (!msg) return
+async function executeTool(name, args) {
+  try {
+    const res = await fetch(`${API_BASE}/tools/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(args)
+    });
+    return await res.json();
+  } catch (e) {
+    return { error: e.message };
+  }
+}
 
-        const log = $("chatLog")
-        const userDiv = document.createElement("div")
-        userDiv.className = "chat-msg user"
-        userDiv.innerHTML = `<div>${escapeHtml(msg)}</div>`
-        log.appendChild(userDiv)
+function abortAgent() {
+  state.agentAbort = true;
+  state.agentRunning = false;
+  toast('Agent aborted');
+}
 
-        input.value = ""
+// ── FILES ──────────────────────────────────────
+async function loadFileTree() {
+  if (!state.ocConnected) {
+    $('fileTree').innerHTML = '<div class="text-muted p-4">OpenCode not connected</div>';
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE}/files/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: state.projectRoot })
+    });
+    const data = await res.json();
+    state.fileTree = data.files || [];
+    renderFileTree();
+  } catch (e) {
+    $('fileTree').innerHTML = `<div class="text-muted p-4">Error: ${e.message}</div>`;
+  }
+}
 
-        const aiDiv = document.createElement("div")
-        aiDiv.className = "chat-msg ai"
-        aiDiv.innerHTML = '<div class="ai-out">Thinking...</div>'
-        log.appendChild(aiDiv)
+function renderFileTree() {
+  const tree = $('fileTree');
+  tree.innerHTML = state.fileTree.map(f => `
+    <div class="file-item ${f.type}" data-path="${f.path}" onclick="openFile('${f.path}')">
+      <span class="file-icon">${f.type === 'dir' ? '📁' : getFileIcon(f.name)}</span>
+      <span>${f.name}</span>
+    </div>
+  `).join('');
+}
 
-        chat("You are a helpful AI assistant.", msg, (tok, full) => {
-          aiDiv.querySelector(".ai-out").innerHTML = formatMd(full)
-          log.scrollTop = log.scrollHeight
-        })
-          .then(() => {
-            G.chatHistory.push({ role: "user", content: msg })
-            G.chatHistory.push({ role: "assistant", content: aiDiv.querySelector(".ai-out").textContent })
-          })
-          .catch((e) => {
-            aiDiv.querySelector(".ai-out").innerHTML = `<span style="color:var(--red)">Error: ${e.message}</span>`
-          })
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const icons = { js: '📜', ts: '📘', py: '🐍', rs: '🦀', go: '🐹', html: '🌐', css: '🎨', json: '{}', md: '📝', txt: '📄' };
+  return icons[ext] || '📄';
+}
 
-        log.scrollTop = log.scrollHeight
-      }
+async function openFile(path) {
+  try {
+    const res = await fetch(`${API_BASE}/files/read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path })
+    });
+    const data = await res.json();
+    state.openFiles[path] = data.content;
+    state.activeFile = path;
+    
+    $('fileName').textContent = path;
+    $('fileEditor').value = data.content;
+    
+    document.querySelectorAll('.file-item').forEach(el => {
+      el.classList.toggle('selected', el.dataset.path === path);
+    });
+  } catch (e) {
+    toast('Failed to open file: ' + e.message, 'error');
+  }
+}
 
-      // ── RE ─────────────────────────────────────────────
-      async function runRE() {
-        const input = $("reInput").value.trim()
-        if (!input) {
-          toast("Enter input")
-          return
-        }
-        if (!G.model) {
-          toast("Select a model")
-          return
-        }
+async function saveFile() {
+  if (!state.activeFile) return;
+  try {
+    await fetch(`${API_BASE}/files/write`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: state.activeFile, content: $('fileEditor').value })
+    });
+    toast('File saved', 'success');
+  } catch (e) {
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
 
-        const out = $("reOut")
-        out.innerHTML = "<div>Analyzing...</div>"
-        audit("RE started", "info")
+function closeFile() {
+  state.activeFile = null;
+  $('fileName').textContent = 'No file selected';
+  $('fileEditor').value = '';
+}
 
-        try {
-          const res = await chat(
-            "Analyze this code/binary for security issues, vulnerabilities, and provide detailed findings with code examples.",
-            input,
-            (tok, full) => {
-              out.innerHTML = `<pre>${escapeHtml(full)}</pre>`
-            },
-          )
-          audit("RE complete", "ok")
-        } catch (e) {
-          out.innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`
-          audit("RE error: " + e.message, "warn")
-        }
-      }
+// ── TERMINAL ────────────────────────────────────
+async function execTerminal(cmd) {
+  if (!cmd.trim()) return;
+  
+  const output = $('terminalOutput');
+  const line = document.createElement('div');
+  line.className = 'terminal-line';
+  line.innerHTML = `<span class="terminal-prompt">$</span> ${escapeHtml(cmd)}`;
+  output.appendChild(line);
+  
+  state.terminalHistory.unshift(cmd);
+  if (state.terminalHistory.length > 100) state.terminalHistory.pop();
+  state.termHistIdx = -1;
+  
+  try {
+    const res = await fetch(`${API_BASE}/exec`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd, cwd: state.termCwd })
+    });
+    const data = await res.json();
+    
+    if (data.stdout) {
+      const out = document.createElement('div');
+      out.className = 'terminal-line';
+      out.textContent = data.stdout;
+      output.appendChild(out);
+    }
+    if (data.stderr) {
+      const err = document.createElement('div');
+      err.className = 'terminal-line terminal-error';
+      err.textContent = data.stderr;
+      output.appendChild(err);
+    }
+    if (data.cwd) state.termCwd = data.cwd;
+    
+    $('terminalInput').value = '';
+    scrollToBottom(output);
+  } catch (e) {
+    const err = document.createElement('div');
+    err.className = 'terminal-line terminal-error';
+    err.textContent = `Error: ${e.message}`;
+    output.appendChild(err);
+  }
+}
 
-      // ── MISSION ─────────────────────────────────────────────
-      async function launchMission() {
-        const obj = $("missionTA").value.trim()
-        if (!obj) {
-          toast("Enter mission objective")
-          return
-        }
-        if (!G.model) {
-          toast("Select a model")
-          return
-        }
+function clearTerminal() {
+  $('terminalOutput').innerHTML = '';
+}
 
-        const log = $("mLog")
-        log.innerHTML = "<div>Mission launched...</div>"
-        audit("Mission started", "info")
+// ── SETTINGS ────────────────────────────────────
+function showSettings() {
+  $('settingsModal').style.display = 'flex';
+  $('ocUrl').value = localStorage.getItem('oc-url') || 'http://localhost:3000';
+  $('defaultModel').value = localStorage.getItem('oc-model') || 'llama2';
+}
 
-        // Simple mission: just use lab pipeline
-        try {
-          const res = await chat(
-            "You are an autonomous agent. Break down the mission into steps and execute each one systematically. Provide progress updates.",
-            obj,
-            (tok, full) => {
-              log.innerHTML = `<pre>${escapeHtml(full)}</pre>`
-            },
-          )
-          log.innerHTML += "\n\n✅ Mission complete"
-          audit("Mission complete", "ok")
-        } catch (e) {
-          log.innerHTML += `\n\n❌ Error: ${e.message}`
-          audit("Mission error: " + e.message, "warn")
-        }
-      }
+function closeSettings() {
+  $('settingsModal').style.display = 'none';
+}
 
-      // ── AGENT ─────────────────────────────────────────────
-      async function runAgent() {
-        const task = $("agentTask").value.trim()
-        if (!task) {
-          toast("Enter agent task")
-          return
-        }
+function saveSettings() {
+  const url = $('ocUrl').value.trim();
+  const model = $('defaultModel').value.trim();
+  localStorage.setItem('oc-url', url);
+  localStorage.setItem('oc-model', model);
+  closeSettings();
+  toast('Settings saved. Restart to apply URL changes.');
+}
 
-        const log = $("agentLog")
-        log.innerHTML = "<div>Agent running...</div>"
-        audit("Agent started", "info")
+function clearAll() {
+  if (confirm('Clear all data?')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
 
-        try {
-          if (G.ocOk) {
-            // Use OpenCode agentic loop
-            await ocAgentRun(task, (event) => {
-              if (event.type === "text") {
-                log.innerHTML = `<div class="ai-out">${escapeHtml(event.content)}</div>`
-              }
-            })
-          } else {
-            // Fallback to regular chat
-            await chat(
-              "You are an autonomous coding agent. Use available tools to complete the task.",
-              task,
-              (tok, full) => {
-                log.innerHTML = `<div class="ai-out">${escapeHtml(full)}</div>`
-              },
-            )
-          }
-          audit("Agent complete", "ok")
-        } catch (e) {
-          log.innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`
-          audit("Agent error: " + e.message, "warn")
-        }
-      }
+// ── UTILS ──────────────────────────────────────
+function scrollToBottom(el) {
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+}
 
-      // ── UTILS ─────────────────────────────────────────────
-      function escapeHtml(str) {
-        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      }
+function formatMd(text) {
+  if (!text) return '';
+  return escapeHtml(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
 
-      function formatMd(text) {
-        if (!text) return ""
-        return escapeHtml(text)
-          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-          .replace(/\*(.*?)\*/g, "<em>$1</em>")
-          .replace(/`(.*?)`/g, "<code>$1</code>")
-          .replace(/\n/g, "<br>")
-      }
+// ── KEYBOARD ────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    if (state.mode === 'chat') sendChat();
+    else if (state.mode === 'agent') runAgent();
+  }
+  if (e.key === 'Escape') {
+    $('settingsModal').style.display = 'none';
+  }
+});
 
-      function toggleAudit() {
-        const p = $("auditPanel")
-        p.style.display = p.style.display === "none" ? "block" : "none"
-      }
+// Terminal history
+$('terminalInput')?.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    state.termHistIdx = Math.min(state.termHistIdx + 1, state.terminalHistory.length - 1);
+    if (state.terminalHistory[state.termHistIdx]) $('terminalInput').value = state.terminalHistory[state.termHistIdx];
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    state.termHistIdx = Math.max(state.termHistIdx - 1, -1);
+    $('terminalInput').value = state.termHistIdx >= 0 ? state.terminalHistory[state.termHistIdx] : '';
+  } else if (e.key === 'Enter') {
+    execTerminal($('terminalInput').value);
+  }
+});
 
-      function clearChat() {
-        $("chatLog").innerHTML = ""
-        G.chatHistory = []
-      }
+function toggleSidebar() {
+  $('sidebar').classList.toggle('collapsed');
+  $('sidebarToggle').textContent = $('sidebar').classList.contains('collapsed') ? '▶' : '◀';
+}
 
-      // ── INIT ─────────────────────────────────────────────
-      ;(async function boot() {
-        audit("Booting...", "sys")
-
-        // Create model select if missing
-        if (!$("modelSel")) createModelSelect()
-
-        // Check services
-        await Promise.all([ollamaCheck(), checkOCServer()])
-
-        audit("Ready", "ok")
-        toast("OpenCode Web UI ready")
-      })()
-    </script>
-  </body>
+// ── INIT ──────────────────────────────────────
+(async function init() {
+  // Load saved settings
+  const savedUrl = localStorage.getItem('oc-url');
+  if (savedUrl) {
+    // Would need to update API_BASE or use different base
+    // For now, assume proxy handles routing
+  }
+  const savedModel = localStorage.getItem('oc-model');
+  
+  await checkOC();
+  if (savedModel && state.model !== savedModel) {
+    $('modelSelect').value = savedModel;
+    state.model = savedModel;
+  }
+  
+  // Initialize agent grid
+  const agents = [
+    { id: 'arch', name: 'Architect', emoji: '🏗️' },
+    { id: 'coder', name: 'Coder', emoji: '💻' },
+    { id: 'reviewer', name: 'Reviewer', emoji: '🔍' },
+    { id: 'tester', name: 'Tester', emoji: '🧪' },
+  ];
+  
+  const grid = $('agentGrid');
+  grid.innerHTML = agents.map(a => `
+    <div class="agent-card" data-agent="${a.id}" onclick="selectAgent('${a.id}')">
+      <div class="agent-emoji">${a.emoji}</div>
+      <div>${a.name}</div>
+    </div>
+  `).join('');
+  
+  // Startup messages
+  console.log('OpenCode Web UI initialized');
+})();
+</script>
+</body>
 </html>
