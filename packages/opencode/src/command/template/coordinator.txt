@@ -1,0 +1,15 @@
+Decompose and execute this task using a multi-agent swarm: $ARGUMENTS
+
+Use the coordinate tool to break this task into parallel work units. Each unit should:
+- Have a clear, isolated scope that doesn't overlap with other units
+- Be assigned the correct role (read, write, test, review, search, general)
+- Include dependency ordering when one unit needs results from another
+
+Guidelines for decomposition:
+- Maximum 8 work units
+- Separate exploration from implementation
+- Separate testing from writing
+- Use read workers for analysis, write workers for code changes, test workers for verification
+- Set dependsOn when a unit needs output from another unit
+
+Execute the swarm and synthesize the results into a clear summary of what was accomplished.

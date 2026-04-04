@@ -1,0 +1,493 @@
+diff --git a/packages/opencode/src/agent/agent.ts b/packages/opencode/src/agent/agent.ts
+index 0c6fe6e..f54bdb9 100644
+--- a/packages/opencode/src/agent/agent.ts
++++ b/packages/opencode/src/agent/agent.ts
+@@ -13,6 +13,7 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
+ import PROMPT_EXPLORE from "./prompt/explore.txt"
+ import PROMPT_SUMMARY from "./prompt/summary.txt"
+ import PROMPT_TITLE from "./prompt/title.txt"
++import PROMPT_COORDINATOR from "../session/prompt/coordinator.txt"
+ import { Permission } from "@/permission"
+ import { mergeDeep, pipe, sortBy, values } from "remeda"
+ import { Global } from "@/global"
+@@ -93,6 +94,8 @@ export namespace Agent {
+             question: "deny",
+             plan_enter: "deny",
+             plan_exit: "deny",
++            // coordinator tool: deny by default, coordinator agent enables it explicitly
++            coordinate: "deny",
+             // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
+             read: {
+               "*": "allow",
+@@ -185,6 +188,24 @@ export namespace Agent {
+               mode: "subagent",
+               native: true,
+             },
++            coordinator: {
++              name: "coordinator",
++              description: `Multi-agent swarm coordinator. Decomposes complex tasks into parallel work units and orchestrates specialized worker agents. Use when a task has clearly separable parts that can run simultaneously (exploration, writing, testing in parallel). Supports up to 8 workers with isolated contexts and role-based tool access.`,
++              prompt: PROMPT_COORDINATOR,
++              options: {},
++              mode: "primary",
++              native: true,
++              permission: Permission.merge(
++                defaults,
++                Permission.fromConfig({
++                  question: "allow",
++                  plan_enter: "allow",
++                  coordinate: "allow",
++                  task: "allow",
++                }),
++                user,
++              ),
++            },
+             compaction: {
+               name: "compaction",
+               mode: "primary",
+diff --git a/packages/opencode/src/command/index.ts b/packages/opencode/src/command/index.ts
+index 088d7c5..fd6c22c 100644
+--- a/packages/opencode/src/command/index.ts
++++ b/packages/opencode/src/command/index.ts
+@@ -10,6 +10,8 @@ import { Skill } from "../skill"
+ import { Log } from "../util/log"
+ import PROMPT_INITIALIZE from "./template/initialize.txt"
+ import PROMPT_REVIEW from "./template/review.txt"
++import PROMPT_BUGHUNTER from "./template/bughunter.txt"
++import PROMPT_COORDINATOR from "./template/coordinator.txt"
+ 
+ export namespace Command {
+   const log = Log.create({ service: "command" })
+@@ -63,6 +65,8 @@ export namespace Command {
+   export const Default = {
+     INIT: "init",
+     REVIEW: "review",
++    BUGHUNTER: "bughunter",
++    COORDINATOR: "coordinator",
+   } as const
+ 
+   export interface Interface {
+@@ -102,6 +106,26 @@ export namespace Command {
+           subtask: true,
+           hints: hints(PROMPT_REVIEW),
+         }
++        commands[Default.BUGHUNTER] = {
++          name: Default.BUGHUNTER,
++          description: "systematically hunt for bugs in [area/file/feature]",
++          source: "command",
++          get template() {
++            return PROMPT_BUGHUNTER
++          },
++          subtask: true,
++          hints: hints(PROMPT_BUGHUNTER),
++        }
++        commands[Default.COORDINATOR] = {
++          name: Default.COORDINATOR,
++          description: "decompose task into parallel worker swarm",
++          source: "command",
++          agent: "coordinator",
++          get template() {
++            return PROMPT_COORDINATOR
++          },
++          hints: hints(PROMPT_COORDINATOR),
++        }
+ 
+         for (const [name, command] of Object.entries(cfg.command ?? {})) {
+           commands[name] = {
+diff --git a/packages/opencode/src/config/config.ts b/packages/opencode/src/config/config.ts
+index 850bcc2..f8ba546 100644
+--- a/packages/opencode/src/config/config.ts
++++ b/packages/opencode/src/config/config.ts
+@@ -1036,6 +1036,96 @@ export namespace Config {
+             .describe("Timeout in milliseconds for model context protocol (MCP) requests"),
+         })
+         .optional(),
++      risk: z
++        .object({
++          rules: z
++            .array(
++              z.object({
++                permission: z.string().describe("Tool permission name to match (supports wildcards)"),
++                pattern: z.string().describe("Argument pattern to match (supports wildcards)"),
++                level: z.enum(["LOW", "MEDIUM", "HIGH"]).describe("Risk level to assign"),
++                reason: z.string().optional().describe("Human-readable reason for this rule"),
++              }),
++            )
++            .optional()
++            .describe("Additional risk classification rules. Appended after built-in rules (last match wins)."),
++          auto_approve_low: z
++            .boolean()
++            .optional()
++            .describe("Auto-approve LOW risk tool calls without permission check (default: true)"),
++          require_approval_high: z
++            .boolean()
++            .optional()
++            .describe("Always require human approval for HIGH risk tool calls (default: true)"),
++        })
++        .optional()
++        .describe("Risk classification configuration for tool call gating"),
++      memory: z
++        .object({
++          autodream: z
++            .object({
++              enabled: z.boolean().optional().describe("Enable AutoDream idle-time memory consolidation (default: true)"),
++              max_chars: z
++                .number()
++                .int()
++                .positive()
++                .optional()
++                .describe("Maximum characters for consolidated memory (default: 8000)"),
++              idle_after_ms: z
++                .number()
++                .int()
++                .positive()
++                .optional()
++                .describe("Milliseconds of idle time before AutoDream runs (default: 30000)"),
++              max_notes: z
++                .number()
++                .int()
++                .positive()
++                .optional()
++                .describe("Maximum raw notes before forced consolidation (default: 200)"),
++            })
++            .optional()
++            .describe("AutoDream memory consolidation settings"),
++          skeptical: z
++            .object({
++              enabled: z
++                .boolean()
++                .optional()
++                .describe("Enable skeptical memory verification obligations (default: true)"),
++              stale_after_days: z
++                .number()
++                .positive()
++                .optional()
++                .describe("Days before a verified claim is considered stale (default: 7)"),
++            })
++            .optional()
++            .describe("Skeptical memory layer settings"),
++        })
++        .optional()
++        .describe("Agent memory system configuration (AutoDream consolidation + Skeptical Memory)"),
++      coordinator: z
++        .object({
++          max_parallel: z
++            .number()
++            .int()
++            .min(1)
++            .max(10)
++            .optional()
++            .describe("Default maximum parallel workers for coordinator swarms (default: 3)"),
++          max_units: z
++            .number()
++            .int()
++            .min(1)
++            .max(16)
++            .optional()
++            .describe("Maximum work units per swarm (default: 8)"),
++          enabled: z
++            .boolean()
++            .optional()
++            .describe("Enable coordinator mode and the coordinate tool (default: true)"),
++        })
++        .optional()
++        .describe("Coordinator multi-agent swarm settings"),
+     })
+     .strict()
+     .meta({
+diff --git a/packages/opencode/src/server/instance.ts b/packages/opencode/src/server/instance.ts
+index 0186bf4..09baf67 100644
+--- a/packages/opencode/src/server/instance.ts
++++ b/packages/opencode/src/server/instance.ts
+@@ -27,6 +27,12 @@ import { ExperimentalRoutes } from "./routes/experimental"
+ import { ProviderRoutes } from "./routes/provider"
+ import { EventRoutes } from "./routes/event"
+ import { errorHandler } from "./middleware"
++// Force registration of new system bus events into the global BusEvent registry
++// so they appear in SSE streams and OpenAPI schemas automatically.
++import "@/session/risk"
++import "@/memory/autodream"
++import "@/memory/skeptical"
++import "@/coordinator"
+ 
+ const log = Log.create({ service: "server" })
+ 
+diff --git a/packages/opencode/src/session/prompt.ts b/packages/opencode/src/session/prompt.ts
+index 24996c8..7e82b5c 100644
+--- a/packages/opencode/src/session/prompt.ts
++++ b/packages/opencode/src/session/prompt.ts
+@@ -50,6 +50,9 @@ import { Process } from "@/util/process"
+ import { Cause, Effect, Exit, Layer, Option, Scope, ServiceMap } from "effect"
+ import { InstanceState } from "@/effect/instance-state"
+ import { makeRuntime } from "@/effect/run-service"
++import { RiskClassifier } from "./risk"
++import { SkepticalMemory } from "@/memory/skeptical"
++import { AutoDream } from "@/memory/autodream"
+ 
+ // @ts-ignore
+ globalThis.AI_SDK_LOG_WARNINGS = false
+@@ -101,6 +104,9 @@ export namespace SessionPrompt {
+       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+       const scope = yield* Scope.Scope
+       const instruction = yield* Instruction.Service
++      const riskClassifier = yield* RiskClassifier.Service
++      const skepticalMemory = yield* SkepticalMemory.Service
++      const autoDream = yield* AutoDream.Service
+ 
+       const state = yield* InstanceState.make(
+         Effect.fn("SessionPrompt.state")(function* () {
+@@ -122,6 +128,29 @@ export namespace SessionPrompt {
+           onIdle: Effect.gen(function* () {
+             runners.delete(sessionID)
+             yield* status.set(sessionID, { type: "idle" })
++            // ── AutoDream: consolidate memory on idle ─────────────────────
++            // Runs in the background after each session completes.
++            // Merges raw observations, removes contradictions, bounds size.
++            // Also promotes verified ephemeral claims to Layer 2 (persistent).
++            yield* Effect.all([
++              autoDream.consolidate().pipe(Effect.ignore),
++              // Promote verified ephemeral claims from this session to persistent Layer 2
++              skepticalMemory.list({ layer: "ephemeral", status: "verified" }).pipe(
++                Effect.flatMap((claims) =>
++                  Effect.forEach(claims, (c) => skepticalMemory.promote(c.id).pipe(Effect.ignore), {
++                    concurrency: "unbounded",
++                    discard: true,
++                  }),
++                ),
++                Effect.ignore,
++              ),
++              // Evict claims older than 7 days
++              skepticalMemory.evictStale().pipe(Effect.ignore),
++            ], { concurrency: "unbounded", discard: true }).pipe(
++              Effect.forkDaemon,
++              Effect.ignore,
++            )
++            // ── End AutoDream idle hook ───────────────────────────────────
+           }),
+           onBusy: status.set(sessionID, { type: "busy" }),
+           onInterrupt: lastAssistant(sessionID),
+@@ -446,6 +475,44 @@ NOTE: At any point in time through this workflow you should feel free to ask the
+               return Effect.runPromise(
+                 Effect.gen(function* () {
+                   const ctx = context(args, options)
++
++                  // ── Risk Classification Gate ────────────────────────────
++                  // Classify the tool call before execution. HIGH risk calls
++                  // will surface via the permission system for human approval
++                  // regardless of existing permission rules.
++                  const riskResult = yield* riskClassifier.gate({
++                    permission: item.id,
++                    pattern: typeof args === "object" && args !== null
++                      ? (args as any).command ?? (args as any).filePath ?? (args as any).path ?? "*"
++                      : "*",
++                    sessionID: ctx.sessionID,
++                    messageID: ctx.messageID,
++                    callID: ctx.callID,
++                    metadata: { tool: item.id, args },
++                  })
++
++                  // For HIGH risk, force a permission ask so the user sees it
++                  // even if the agent's ruleset would normally auto-allow this tool.
++                  if (riskResult.level === "HIGH") {
++                    yield* Effect.promise(() =>
++                      ctx.ask({
++                        permission: item.id,
++                        metadata: {
++                          riskLevel: "HIGH",
++                          riskReason: riskResult.reason,
++                          ...((typeof args === "object" && args !== null) ? args as Record<string, unknown> : {}),
++                        },
++                        patterns: [
++                          typeof args === "object" && args !== null
++                            ? (args as any).command ?? (args as any).filePath ?? (args as any).path ?? "*"
++                            : "*",
++                        ],
++                        always: ["*"],
++                      }),
++                    )
++                  }
++                  // ── End Risk Gate ───────────────────────────────────────
++
+                   yield* plugin.trigger(
+                     "tool.execute.before",
+                     { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
+@@ -466,6 +533,24 @@ NOTE: At any point in time through this workflow you should feel free to ask the
+                     { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
+                     output,
+                   )
++
++                  // ── AutoDream observation capture ─────────────────────────
++                  // Capture notable tool results as raw observations so
++                  // AutoDream can consolidate them during idle time.
++                  // Only capture read/bash/grep tools to avoid noise.
++                  const CAPTURE_TOOLS = ["read", "bash", "grep", "glob", "list"]
++                  if (CAPTURE_TOOLS.includes(item.id) && output.output && typeof output.output === "string") {
++                    const truncated = output.output.slice(0, 400)
++                    if (truncated.trim().length > 20) {
++                      yield* autoDream.addNote({
++                        text: `[${item.id}] ${truncated}`,
++                        source: "tool",
++                        tags: [item.id],
++                      }).pipe(Effect.ignore)
++                    }
++                  }
++                  // ── End AutoDream capture ─────────────────────────────────
++
+                   return output
+                 }),
+               )
+@@ -1498,15 +1583,63 @@ NOTE: At any point in time through this workflow you should feel free to ask the
+ 
+                 yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+ 
+-                const [skills, env, instructions, modelMsgs] = yield* Effect.all([
++                const [skills, env, instructions, modelMsgs, memoryBlock, verificationBlock] = yield* Effect.all([
+                   Effect.promise(() => SystemPrompt.skills(agent)),
+                   Effect.promise(() => SystemPrompt.environment(model)),
+                   instruction.system().pipe(Effect.orDie),
+                   Effect.promise(() => MessageV2.toModelMessages(msgs, model)),
++                  // ── AutoDream + Skeptical Memory ─────────────────────────
++                  // Reinsert on EVERY turn so the agent is never without its
++                  // memory context (mirrors AGENTS.md reinsertion behaviour).
++                  skepticalMemory.systemPromptBlock(sessionID).pipe(Effect.orElse(() => Effect.succeed(""))),
++                  // Verification obligations for unverified ephemeral claims
++                  skepticalMemory.verificationObligation(sessionID).pipe(Effect.orElse(() => Effect.succeed(""))),
+                 ])
+-                const system = [...env, ...(skills ? [skills] : []), ...instructions]
++
++                // ── AGENTS.md Reinsertion ─────────────────────────────────
++                // Re-read instruction files on every turn (not just first turn).
++                // This ensures any changes to AGENTS.md/CLAUDE.md are picked up
++                // and the agent is constantly reminded of project conventions.
++                // instruction.system() already does this via InstanceState invalidation
++                // on file change — but we explicitly pull fresh content every loop step
++                // to guarantee reinsertion even without file-watch events.
++                const freshInstructions = step > 1
++                  ? yield* instruction.system().pipe(Effect.orDie)
++                  : instructions
++
++                const system = [
++                  ...env,
++                  ...(skills ? [skills] : []),
++                  // Coordinator agent system prompt (no-op for all other agents)
++                  ...SystemPrompt.coordinator(agent),
++                  // Risk policy block — informs agent of LOW/MEDIUM/HIGH gating
++                  SystemPrompt.riskPolicy(),
++                  ...freshInstructions,
++                  // Memory blocks last so they appear close to the conversation turn
++                  ...(memoryBlock ? [memoryBlock] : []),
++                ]
+                 const format = lastUser.format ?? { type: "text" as const }
+                 if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
++
++                // ── Skeptical Memory verification obligation ───────────────
++                // Append verification obligation as synthetic user message part
++                // when there are unverified ephemeral claims. This forces the
++                // model to actually verify before acting rather than skipping it.
++                if (verificationBlock) {
++                  const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
++                  if (lastUserMsg) {
++                    lastUserMsg.parts.push({
++                      id: PartID.ascending(),
++                      messageID: lastUserMsg.info.id,
++                      sessionID: lastUserMsg.info.sessionID,
++                      type: "text",
++                      text: verificationBlock,
++                      synthetic: true,
++                    })
++                  }
++                }
++                // ── End skeptical memory injection ────────────────────────
++
+                 const result = yield* handle.process({
+                   user: lastUser,
+                   agent,
+@@ -1730,6 +1863,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
+         Layer.provide(Agent.defaultLayer),
+         Layer.provide(Bus.layer),
+         Layer.provide(CrossSpawnSpawner.defaultLayer),
++        Layer.provide(RiskClassifier.defaultLayer),
++        Layer.provide(SkepticalMemory.defaultLayer),
++        Layer.provide(AutoDream.defaultLayer),
+       ),
+     ),
+   )
+diff --git a/packages/opencode/src/session/system.ts b/packages/opencode/src/session/system.ts
+index 09788f3..448f9e5 100644
+--- a/packages/opencode/src/session/system.ts
++++ b/packages/opencode/src/session/system.ts
+@@ -11,6 +11,7 @@ import PROMPT_KIMI from "./prompt/kimi.txt"
+ 
+ import PROMPT_CODEX from "./prompt/codex.txt"
+ import PROMPT_TRINITY from "./prompt/trinity.txt"
++import PROMPT_COORDINATOR from "./prompt/coordinator.txt"
+ import type { Provider } from "@/provider/provider"
+ import type { Agent } from "@/agent/agent"
+ import { Permission } from "@/permission"
+@@ -68,9 +69,37 @@ export namespace SystemPrompt {
+     return [
+       "Skills provide specialized instructions and workflows for specific tasks.",
+       "Use the skill tool to load a skill when a task matches its description.",
+-      // the agents seem to ingest the information about skills a bit better if we present a more verbose
+-      // version of them here and a less verbose version in tool description, rather than vice versa.
+       Skill.fmt(list, { verbose: true }),
+     ].join("\n")
+   }
++
++  /**
++   * Returns coordinator-specific system prompt block when active agent is "coordinator".
++   */
++  export function coordinator(agent: Agent.Info): string[] {
++    if (agent.name !== "coordinator") return []
++    return [PROMPT_COORDINATOR]
++  }
++
++  /**
++   * Builds a risk policy summary block injected into every system prompt.
++   * Informs the agent about LOW/MEDIUM/HIGH classification and gating behaviour.
++   */
++  export function riskPolicy(): string {
++    return [
++      "<risk-policy>",
++      "Every tool call you make is automatically classified as LOW, MEDIUM, or HIGH risk.",
++      "",
++      "- LOW:    Executes immediately (reads, searches, navigation)",
++      "- MEDIUM: Executes but is logged and visible to the user (file edits, shell commands)",
++      "- HIGH:   Requires explicit human approval before execution.",
++      "          Examples: writing .env files, sudo commands, git push, npm publish,",
++      "          editing CI workflows, rm -rf patterns.",
++      "",
++      "You do NOT need to ask the user before LOW or MEDIUM risk actions.",
++      "HIGH risk actions will automatically surface an approval prompt.",
++      "If approval is rejected, stop and explain why you needed the action.",
++      "</risk-policy>",
++    ].join("\n")
++  }
+ }
+diff --git a/packages/opencode/src/tool/registry.ts b/packages/opencode/src/tool/registry.ts
+index b538a9e..190d02e 100644
+--- a/packages/opencode/src/tool/registry.ts
++++ b/packages/opencode/src/tool/registry.ts
+@@ -12,6 +12,7 @@ import { WebFetchTool } from "./webfetch"
+ import { WriteTool } from "./write"
+ import { InvalidTool } from "./invalid"
+ import { SkillTool } from "./skill"
++import { CoordinateTool } from "./coordinate"
+ import type { Agent } from "../agent/agent"
+ import { Tool } from "./tool"
+ import { Config } from "../config/config"
+@@ -139,6 +140,7 @@ export namespace ToolRegistry {
+         const lsp = yield* build(LspTool)
+         const batch = yield* build(BatchTool)
+         const plan = yield* build(PlanExitTool)
++        const coordinate = yield* build(CoordinateTool)
+ 
+         const all = Effect.fn("ToolRegistry.all")(function* (custom: Tool.Info[]) {
+           const cfg = yield* config.get()
+@@ -161,6 +163,7 @@ export namespace ToolRegistry {
+             code,
+             skill,
+             patch,
++            coordinate,
+             ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [lsp] : []),
+             ...(cfg.experimental?.batch_tool === true ? [batch] : []),
+             ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [plan] : []),

@@ -1,0 +1,43 @@
+Systematically hunt for bugs in: $ARGUMENTS
+
+## Phase 1: Discovery
+
+Run multiple parallel exploration passes to find relevant code:
+- Use Glob to find all files in the specified area
+- Use Grep to search for error handling patterns, TODO comments, FIXME markers
+- Use Grep to search for common bug patterns: null checks, boundary conditions, race conditions
+- Use Bash to check recent git changes in this area: git log --oneline -20 -- <area>
+- Identify test gaps: what code paths have no test coverage
+
+## Phase 2: Analysis
+
+For each file discovered, trace data flows and check:
+- Input validation: are all external inputs validated before use?
+- Null/undefined dereferences: are optional values properly guarded?
+- Boundary conditions: array bounds, string lengths, numeric overflow
+- Race conditions: shared mutable state, async/await patterns
+- Error handling: are errors caught and handled, or silently swallowed?
+- Resource leaks: unclosed files, connections, timers
+- Security: injection vectors, auth bypass, data exposure
+
+## Phase 3: Report
+
+Output a structured report grouped by severity:
+
+### Critical
+- Bugs that cause crashes, data loss, or security vulnerabilities
+
+### High
+- Bugs that cause incorrect behavior under realistic conditions
+
+### Medium
+- Bugs that cause issues in edge cases or unusual inputs
+
+### Low
+- Code quality issues that could lead to bugs, minor inconsistencies
+
+For each bug include:
+- File path and line number
+- What the bug is
+- How to reproduce it
+- Suggested fix
