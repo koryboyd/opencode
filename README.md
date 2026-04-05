@@ -7,6 +7,8 @@
     </picture>
   </a>
 </p>
+<p align="center"><strong>⚠️ WORK IN PROGRESS — Active Development Branch ⚠️</strong></p>
+<p align="center">This fork is implementing comprehensive improvements based on the <a href="https://github.com/koryboyd/opencode/blob/dev/opencode-port-plan.md">OpenCode Port Plan</a>.</p>
 <p align="center">The open source AI coding agent.</p>
 <p align="center">
   <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
@@ -42,6 +44,200 @@
 [![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
 
 ---
+
+### 🔧 Active Development: OpenCode Port Plan
+
+This branch contains work-in-progress implementation of the [OpenCode Port Plan](opencode-port-plan.md), a comprehensive upgrade to OpenCode inspired by Claude Code's superior implementations.
+
+**⚠️ This codebase has errors and will not run as-is.** All features are represented in the codebase but are scaffolding/partial implementations that need completion.
+
+---
+
+### 📋 Phase 1: Base Prompt Improvements
+
+Hard numeric limits and explicit prohibitions to reduce unnecessary token usage:
+
+| Feature | Description |
+|---------|-------------|
+| **Conciseness Rules** | Hard numeric limits: ≤4 lines for conversational responses, ≤25 words between tool calls, ≤100 words final responses |
+| **Preamble Prohibition** | No "I'll now...", "Let me...", "Certainly!" — begin immediately with action |
+| **Post-Action Summary Prohibition** | No summarizing what was done — results speak for themselves |
+| **Meta-Rule: When in Doubt, Don't** | Explicit instruction to ask rather than proceed under uncertainty |
+| **Targeted Failure Mode Prohibitions** | Specific prohibitions: no edits without reading first, no adding docstrings to unmodified code, no TODO comments |
+| **Read Before Modify** | Explicit rule: must read file in current session before editing |
+| **Parallelism Instruction** | Issue independent tool calls simultaneously, not sequentially |
+| **Subagent Task Writing** | Guidance for writing self-contained subagent prompts |
+
+**Files:** `packages/opencode/src/session/prompt/assembly.ts`, prompt templates
+
+---
+
+### 🧠 Phase 2: Context & Memory Improvements
+
+Multi-layered context system for better prompt caching and session continuity:
+
+| Feature | Description |
+|---------|-------------|
+| **Static/Dynamic Cache Boundary** | Static prompt content (rules, identity) before dynamic content (session-specific) for 90% cache cost reduction |
+| **AGENTS.md in Messages Array** | Move project AGENTS.md to messages array instead of system prompt, preserving shared cache prefix |
+| **Global User AGENTS.md** | `~/.opencode/AGENTS.md` loaded for all projects, project-level overrides global |
+| **Subdirectory AGENTS.md** | Auto-load `AGENTS.md` from subdirectories when entering that context |
+| **Path-Scoped Rules** | `.opencode/rules/` with YAML frontmatter for path-specific rules (auto-triggered on file access) |
+| **Session Exit Summary** | Generate ≤200 word summary on exit, inject at next session start (7-day TTL) |
+| **AGENTS.md Update Suggestions** | Prompt to suggest AGENTS.md updates when discovering project conventions |
+
+**Files:** `packages/opencode/src/session/prompt.ts`, `packages/opencode/src/session/exit-summary.ts`, skill system
+
+---
+
+### 📦 Phase 3: Compaction Upgrades
+
+Smarter context management when approaching context limits:
+
+| Feature | Description |
+|---------|-------------|
+| **Circuit Breaker** | Stop retrying after 3 consecutive compaction failures, surface error to user |
+| **Structured Compaction Prompt** | 9-section structured format: Active task, Completed work, Commands executed, Unresolved issues, Dead ends, Decisions made, Current file states, Next steps, Important constraints |
+| **AGENTS.md Re-injection** | Explicitly re-inject AGENTS.md after compaction (not rely on summary preserving it) |
+| **MicroCompact** | Local stale output pruning before full compaction: superseded tool results, aged listings (10+ turns), aged search results (15+ turns) |
+
+**Files:** `packages/opencode/src/session/compaction.ts`
+
+---
+
+### 📐 Phase 4: Plan Mode Upgrade
+
+Tool-level plan mode enforcement and explicit enter/exit transitions:
+
+| Feature | Description |
+|---------|-------------|
+| **Tool-Level Write Removal** | Write tools removed from tool list entirely in plan mode (not just blocked) |
+| **enter_plan_mode Tool** | Explicit tool call to enter plan mode with clear identity |
+| **exit_plan_mode Tool** | Explicit tool call to exit plan mode (requires plan_summary parameter) |
+| **Plan Mode Identity Section** | "Your role is architect and analyst, not implementor" — qualitative identity shift |
+
+**Files:** `packages/opencode/src/session/prompt.ts` (PROMPT_PLAN), permission system
+
+---
+
+### ⚙️ Phase 5: Settings Hierarchy
+
+Per-machine configuration that never gets committed:
+
+| Feature | Description |
+|---------|-------------|
+| **Local Gitignored Settings** | `.opencode/settings.local.json` — per-machine overrides |
+| **Explicit Resolution Order** | Documented priority: CLI flags > ENV > local > project > global |
+| **CLI Command** | `opencode config local` to edit local settings |
+
+**Files:** `packages/opencode/src/config/config.ts`
+
+---
+
+### 🔌 Phase 6: MCP Client Improvements
+
+Optimized MCP tool loading:
+
+| Feature | Description |
+|---------|-------------|
+| **Tool Schema Caching** | Serialize MCP tool schemas once at session start, reuse across API calls |
+| **Category-Based Lazy Loading** | Group tools by category (filesystem, git, web, database, testing, terminal), load on-demand |
+
+**Files:** `packages/opencode/src/mcp/index.ts`
+
+---
+
+### 🤖 Phase 7: Agent System
+
+Rich per-agent configuration:
+
+| Feature | Description |
+|---------|-------------|
+| **Per-Agent Model** | `model:` field in agent YAML — different models for different tasks |
+| **Per-Agent Tool Allowlist** | `allowedTools:` field — restrict tools at API level |
+| **Per-Agent Tool Denylist** | `disallowedTools:` field — block specific tools |
+| **Background Agents** | `background: true` — non-blocking subagent execution |
+| **Max Turns Per Agent** | `maxTurns:` — limit agent iterations |
+| **Worktree Isolation** | `isolation: worktree` — isolated git worktree per agent |
+| **Scoped Lifecycle Hooks** | Agent-specific hooks via YAML |
+
+**Files:** `packages/opencode/src/agent/agent.ts`, `packages/opencode/src/agent/subagent.ts`
+
+---
+
+### 📊 Phase 8: Context Window Visibility
+
+Real-time token tracking:
+
+| Feature | Description |
+|---------|-------------|
+| **Context Usage Bar** | TUI status: `Context: 45,230 / 200,000 (22%)` with color warnings |
+| **Per-Turn Token Breakdown** | `+1,240 tokens this turn` with cache read/write stats |
+| **Cost Estimation** | Estimated cost per turn and cumulative session cost |
+| **Verbose Mode Toggle** | `Ctrl+O` to show system prompt, tool payloads, cache status |
+
+---
+
+### 🪝 Phase 9: Hooks System
+
+Extensible lifecycle events:
+
+| Feature | Description |
+|---------|-------------|
+| **PreToolUse Hook** | Block/modify tool calls before execution |
+| **PostToolUse Hook** | Inject context after successful tool execution |
+| **PostToolUseFailure Hook** | Observe and log failed tool calls |
+| **UserPromptSubmit Hook** | Inject context before sending to model |
+| **SessionStart/End Hooks** | Lifecycle observability |
+| **Stop Hook** | Inject continuation after model turn |
+| **PreCompact Hook** | Observe compaction triggers |
+| **Hook Types** | Command hooks (shell), HTTP hooks (webhook), Prompt hooks (inject), Agent hooks (spawn) |
+| **Tool Name Matching** | Regex patterns to scope hooks to specific tools |
+
+**Files:** `packages/opencode/src/config/config.ts` (hooks schema)
+
+---
+
+### 🧠 Bonus: Memory System
+
+Session memory and knowledge management:
+
+| Feature | Description |
+|---------|-------------|
+| **AutoDream** | Idle-time memory consolidation — merges observations, removes contradictions |
+| **Skeptical Memory** | Ephemeral claims with verification obligations, auto-promote verified claims to persistent layer |
+| **Tool Observation Capture** | Auto-capture notable read/bash/grep results as raw observations |
+| **Session Exit Summary** | Generate and persist summary for next session continuity |
+
+**Files:** Memory modules, `packages/opencode/src/session/exit-summary.ts`
+
+---
+
+### 📁 Key Files Modified
+
+```
+packages/opencode/src/
+├── agent/
+│   ├── agent.ts           # Per-agent config (model, tools, background)
+│   └── subagent.ts        # Isolated subagent spawning
+├── config/
+│   └── config.ts          # Settings hierarchy, hooks schema
+├── mcp/
+│   └── index.ts           # Tool caching, category lazy loading
+├── session/
+│   ├── compaction.ts      # Circuit breaker, structured prompt, MicroCompact
+│   ├── exit-summary.ts    # Session exit summaries
+│   ├── llm.ts            # Static/dynamic prompt boundary
+│   ├── prompt.ts          # Plan mode, reminders, tool resolution
+│   └── (prompt/)          # Prompt assembly and templates
+├── skill/
+│   └── index.ts           # Enhanced skill metadata (model, allowedTools, paths)
+└── (memory modules)       # AutoDream, Skeptical Memory
+```
+
+---
+
+See [opencode-port-plan.md](opencode-port-plan.md) for full implementation tasks.
 
 ### Installation
 
