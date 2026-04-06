@@ -48,6 +48,7 @@
 ### 🔧 Active Development: OpenCode Port Plan
 
 This branch contains work-in-progress implementation of the [OpenCode Port Plan](opencode-port-plan.md), a comprehensive upgrade to OpenCode inspired by Claude Code's superior implementations.
+NOT AFFILIATED WITH ANOMALY OR OPENCODE TEAM AT ALL
 
 **⚠️ This codebase has errors and will not run as-is.** All features are represented in the codebase but are scaffolding/partial implementations that need completion.
 
